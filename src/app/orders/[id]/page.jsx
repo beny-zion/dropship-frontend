@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { ordersApi } from '@/lib/api/orders';
+import { useEffect, useState, useRef } from 'react';
+import { useParams } from 'next/navigation';
+import { getOrderById } from '@/lib/api/orders';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useReactToPrint } from 'react-to-print';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -18,18 +19,20 @@ import {
   MapPin,
   Phone,
   Mail,
+  Download,
+  Printer,
 } from 'lucide-react';
 
 export default function OrderDetailsPage() {
   const params = useParams();
-  const router = useRouter();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const printRef = useRef(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await ordersApi.getOrderById(params.id);
+        const response = await getOrderById(params.id);
         if (response.success) {
           setOrder(response.data);
         }
@@ -42,6 +45,36 @@ export default function OrderDetailsPage() {
 
     fetchOrder();
   }, [params.id]);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `הזמנה-${order?.orderNumber || 'order'}`,
+    onBeforeGetContent: () => {
+      return new Promise((resolve) => {
+        // Wait a bit for images to load
+        setTimeout(resolve, 500);
+      });
+    },
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 20mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .no-print {
+          display: none !important;
+        }
+        img {
+          max-width: 100%;
+          page-break-inside: avoid;
+        }
+      }
+    `,
+  });
 
   if (loading) {
     return (
@@ -78,17 +111,25 @@ export default function OrderDetailsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Success Header */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8 text-center">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8 text-center no-print">
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-green-800 mb-2">
           ההזמנה התקבלה בהצלחה!
         </h1>
-        <p className="text-green-700">
+        <p className="text-green-700 mb-4">
           תודה על ההזמנה. נשלח לך אישור למייל בקרוב.
         </p>
+        <Button
+          onClick={handlePrint}
+          variant="outline"
+          className="bg-white"
+        >
+          <Printer className="h-4 w-4 ml-2" />
+          הדפס / שמור כ-PDF
+        </Button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div ref={printRef} className="grid lg:grid-cols-3 gap-8">
         {/* Order Details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Order Info */}
@@ -131,18 +172,26 @@ export default function OrderDetailsPage() {
               <div className="space-y-4">
                 {order.items.map((item) => (
                   <div key={item.product._id} className="flex gap-4">
-                    <div className="relative h-20 w-20 bg-gray-100 rounded flex-shrink-0">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-contain p-2"
-                      />
+                    <div className="relative h-20 w-20 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center">
+                      {item.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="object-contain p-2 w-full h-full"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<div class="text-xs text-gray-400">אין תמונה</div>';
+                          }}
+                        />
+                      ) : (
+                        <div className="text-xs text-gray-400">אין תמונה</div>
+                      )}
                     </div>
                     <div className="flex-1">
                       <Link
                         href={`/products/${item.product.slug || item.product._id}`}
-                        className="font-medium hover:text-blue-600"
+                        className="font-medium hover:text-blue-600 print:no-underline print:text-black"
                       >
                         {item.name}
                       </Link>
@@ -201,10 +250,18 @@ export default function OrderDetailsPage() {
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               <p className="font-medium">{order.shippingAddress.fullName}</p>
-              <p>{order.shippingAddress.street}</p>
-              {order.shippingAddress.apartment && (
-                <p>דירה {order.shippingAddress.apartment}</p>
-              )}
+              <p>
+                {order.shippingAddress.street}
+                {(order.shippingAddress.apartment || order.shippingAddress.floor || order.shippingAddress.entrance) && (
+                  <span className="text-xs mr-2">
+                    ({[
+                      order.shippingAddress.apartment && `דירה ${order.shippingAddress.apartment}`,
+                      order.shippingAddress.floor && `קומה ${order.shippingAddress.floor}`,
+                      order.shippingAddress.entrance && `כניסה ${order.shippingAddress.entrance}`
+                    ].filter(Boolean).join(', ')})
+                  </span>
+                )}
+              </p>
               <p>
                 {order.shippingAddress.city}, {order.shippingAddress.zipCode}
               </p>
@@ -253,7 +310,7 @@ export default function OrderDetailsPage() {
           </Card>
 
           {/* Actions */}
-          <div className="space-y-3">
+          <div className="space-y-3 no-print">
             <Link href="/orders">
               <Button variant="outline" className="w-full">
                 ההזמנות שלי

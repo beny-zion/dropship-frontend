@@ -5,9 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext'; // ⭐ חדש
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react'; // ⭐ חדש
+import UserMenu from './UserMenu';
 
 export default function Header() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { getItemCount } = useCart(); // ⭐ חדש
   const itemCount = getItemCount(); // ⭐ חדש
 
@@ -45,19 +46,7 @@ export default function Header() {
             </Link>
 
             {isAuthenticated ? (
-              <>
-                <Link href="/orders">
-                  <Button variant="ghost" size="sm">
-                    ההזמנות שלי
-                  </Button>
-                </Link>
-                <span className="text-sm text-gray-600">
-                  שלום, {user.firstName}
-                </span>
-                <Button variant="outline" size="sm" onClick={logout}>
-                  התנתק
-                </Button>
-              </>
+              <UserMenu />
             ) : (
               <>
                 <Link href="/login">

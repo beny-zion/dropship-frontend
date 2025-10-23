@@ -114,37 +114,31 @@ export default function OrdersPage() {
                           <div className="flex items-center gap-2">
                             <span>סה"כ:</span>
                             <span className="font-medium">
-                              {formatCurrency(order.pricing?.total || order.totalAmount)}
+                              {formatCurrency(order.totalAmount)}
                             </span>
                           </div>
                         </div>
 
                         {/* Order Items Preview */}
                         <div className="flex gap-2 overflow-x-auto py-2">
-                          {order.items.slice(0, 4).map((item, idx) => {
-                            // Get image from either product.images array or item.image or product.imageUrl
-                            const primaryImage = item.product?.images?.find(img => img.isPrimary);
-                            const imageUrl = primaryImage?.url || item.product?.images?.[0]?.url || item.image || item.product?.imageUrl;
-
-                            return (
-                              <div
-                                key={idx}
-                                className="relative w-16 h-16 rounded border bg-muted shrink-0"
-                              >
-                                {imageUrl ? (
-                                  <img
-                                    src={imageUrl}
-                                    alt={item.name || item.product?.name_he || 'מוצר'}
-                                    className="w-full h-full object-cover rounded"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <ShoppingBag className="h-6 w-6 text-muted-foreground" />
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                          {order.items.slice(0, 4).map((item, idx) => (
+                            <div
+                              key={idx}
+                              className="relative w-16 h-16 rounded border bg-muted shrink-0"
+                            >
+                              {item.product?.imageUrl ? (
+                                <img
+                                  src={item.product.imageUrl}
+                                  alt={item.product.name_he}
+                                  className="w-full h-full object-cover rounded"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
                           {order.items.length > 4 && (
                             <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center text-sm font-medium shrink-0">
                               +{order.items.length - 4}

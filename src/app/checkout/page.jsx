@@ -4,18 +4,21 @@ import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { ordersApi } from '@/lib/api/orders';
+import { createOrder } from '@/lib/api/orders';
+import { useAddresses, useCreateAddress } from '@/lib/hooks/useAddresses';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, MapPin } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 // Validation Schema
 const shippingSchema = z.object({
@@ -24,7 +27,7 @@ const shippingSchema = z.object({
   email: z.string().email('אימייל לא תקין'),
   street: z.string().min(3, 'כתובת חייבת להיות לפחות 3 תווים'),
   city: z.string().min(2, 'שם עיר חייב להיות לפחות 2 תווים'),
-  zipCode: z.string().min(5, 'מיקוד חייב להיות לפחות 5 ספרות'),
+  zipCode: z.string().regex(/^\d{7}$/, 'מיקוד חייב להיות 7 ספרות'),
   apartment: z.string().optional(),
   floor: z.string().optional(),
   entrance: z.string().optional(),
@@ -32,16 +35,25 @@ const shippingSchema = z.object({
 });
 
 export default function CheckoutPage() {
-  const { cart, clearCart } = useCart();
+  const { cart } = useCart();
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [saveAddress, setSaveAddress] = useState(true); // Save address by default
+
+  const { data: addressesData, isLoading: addressesLoading } = useAddresses();
+  const addresses = addressesData || [];
+  const createAddressMutation = useCreateAddress();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
+    setValue,
   } = useForm({
     resolver: zodResolver(shippingSchema),
     defaultValues: {
@@ -50,6 +62,28 @@ export default function CheckoutPage() {
       phone: user?.phone || '',
     },
   });
+
+  // Auto-select default address on load
+  useEffect(() => {
+    if (addresses.length > 0 && !selectedAddressId) {
+      const defaultAddress = addresses.find(addr => addr.isDefault);
+      if (defaultAddress) {
+        selectAddress(defaultAddress);
+      }
+    }
+  }, [addresses, selectedAddressId]);
+
+  const selectAddress = (address) => {
+    setSelectedAddressId(address._id);
+    setValue('fullName', address.fullName);
+    setValue('phone', address.phone);
+    setValue('street', address.street);
+    setValue('apartment', address.apartment || '');
+    setValue('floor', address.floor || '');
+    setValue('entrance', address.entrance || '');
+    setValue('city', address.city);
+    setValue('zipCode', address.zipCode);
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -83,11 +117,33 @@ export default function CheckoutPage() {
       };
 
       // Create order
-      const response = await ordersApi.createOrder(orderData);
+      const response = await createOrder(orderData);
 
       if (response.success) {
+        // Save address if requested and not using existing address
+        if (saveAddress && !selectedAddressId) {
+          try {
+            await createAddressMutation.mutateAsync({
+              fullName: data.fullName,
+              phone: data.phone,
+              street: data.street,
+              apartment: data.apartment,
+              floor: data.floor,
+              entrance: data.entrance,
+              city: data.city,
+              zipCode: data.zipCode,
+              label: 'home',
+              isDefault: addresses.length === 0, // First address is default
+            });
+          } catch (error) {
+            console.error('Save address error:', error);
+            // Don't block order completion if address save fails
+          }
+        }
+
         toast.success('ההזמנה נוצרה בהצלחה!');
-        clearCart();
+        // Invalidate cart query to refresh - server already cleared it
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
         router.push(`/orders/${response.data._id}`);
       }
     } catch (error) {
@@ -157,6 +213,92 @@ export default function CheckoutPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Side - Form */}
           <div className="lg:col-span-2">
+            {/* Saved Addresses */}
+            {addressesLoading ? (
+              <Card className="mb-6">
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3"></div>
+                    <p className="text-gray-600">טוען כתובות...</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : addresses.length > 0 ? (
+              <Card className="mb-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>בחר כתובת משלוח</CardTitle>
+                    <Link href="/addresses">
+                      <Button variant="outline" size="sm">
+                        נהל כתובות
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3">
+                    {addresses.map((address) => (
+                      <div
+                        key={address._id}
+                        onClick={() => selectAddress(address)}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                          selectedAddressId === address._id
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-1 ${selectedAddressId === address._id ? 'text-blue-600' : 'text-gray-400'}`}>
+                            <MapPin className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold">{address.fullName}</span>
+                              {address.isDefault && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                  ברירת מחדל
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {address.street}
+                              {(address.apartment || address.floor || address.entrance) && (
+                                <span className="text-xs mr-2">
+                                  ({[
+                                    address.apartment && `דירה ${address.apartment}`,
+                                    address.floor && `קומה ${address.floor}`,
+                                    address.entrance && `כניסה ${address.entrance}`
+                                  ].filter(Boolean).join(', ')})
+                                </span>
+                              )}
+                              , {address.city}, {address.zipCode}
+                            </p>
+                            <p className="text-sm text-gray-500" dir="ltr">
+                              {address.phone}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="mb-6 border-dashed">
+                <CardContent className="pt-6">
+                  <div className="text-center py-4">
+                    <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 mb-3">אין כתובות שמורות</p>
+                    <Link href="/addresses">
+                      <Button variant="outline" size="sm">
+                        הוסף כתובת לשימוש עתידי
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>פרטי משלוח</CardTitle>
@@ -294,6 +436,25 @@ export default function CheckoutPage() {
                     placeholder="הערות נוספות..."
                   />
                 </div>
+
+                {/* Save Address Checkbox - only show if not using existing address */}
+                {!selectedAddressId && (
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="saveAddress"
+                      checked={saveAddress}
+                      onChange={(e) => setSaveAddress(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="saveAddress" className="cursor-pointer font-normal">
+                      שמור כתובת זו לשימוש עתידי
+                      {addresses.length === 0 && (
+                        <span className="text-xs text-gray-500 mr-1">(תוגדר כברירת מחדל)</span>
+                      )}
+                    </Label>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
