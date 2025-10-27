@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/1/Desktop/אמזון/amazon-dropship/backend/src/models/**)",
+      "Bash(cat ../backend/src/models/User.js)",
+      "Read(//c/Users/1/Desktop/אמזון/amazon-dropship/backend/**)",
+      "Bash(cat src/app.js)",
+      "Bash(cat ../backend/src/app.js)",
+      "Bash(npm install express-rate-limit)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

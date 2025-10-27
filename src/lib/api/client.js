@@ -26,7 +26,7 @@ apiClient.interceptors.request.use(
 
 // Response interceptor - טיפול בשגיאות
 apiClient.interceptors.response.use(
-  (response) => response.data,
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       // Token פג תוקף - מחיקה והפניה לlogin
