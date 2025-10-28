@@ -13,8 +13,24 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart(); // ⭐ חדש
   const [adding, setAdding] = useState(false); // ⭐ חדש
 
-  const hasDiscount = product.price.discount > 0;
-  const freeShipping = product.shipping.cost === 0;
+  const hasDiscount = product.discount > 0;
+  const freeShipping = product.shipping?.freeShipping || product.shipping?.cost === 0;
+
+  // Helper to get primary image URL
+  const getPrimaryImageUrl = () => {
+    if (!product.images || product.images.length === 0) return null;
+
+    // If it's a string array
+    if (typeof product.images[0] === 'string') {
+      return product.images[0];
+    }
+
+    // If it's an object array, find primary or use first
+    const primaryImage = product.images.find(img => img.isPrimary);
+    return primaryImage?.url || product.images[0]?.url;
+  };
+
+  const imageUrl = getPrimaryImageUrl();
 
   // ⭐ חדש
   const handleAddToCart = async (e) => {
@@ -36,13 +52,14 @@ export default function ProductCard({ product }) {
       <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white">
         {/* Image */}
         <div className="relative h-48 bg-gray-100">
-          {product.images?.main ? (
+          {imageUrl ? (
             <Image
-              src={product.images.main}
-              alt={product.name_he}
+              src={imageUrl}
+              alt={product.name_he || 'מוצר'}
               fill
               className="object-contain p-4"
               sizes="(max-width: 768px) 100vw, 25vw"
+              unoptimized={imageUrl.startsWith('data:')}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
@@ -54,7 +71,7 @@ export default function ProductCard({ product }) {
           <div className="absolute top-2 right-2 flex flex-col gap-2">
             {hasDiscount && (
               <Badge className="bg-red-500">
-                -{product.price.discount}%
+                -{product.discount}%
               </Badge>
             )}
             {freeShipping && (
@@ -73,27 +90,29 @@ export default function ProductCard({ product }) {
           </h3>
 
           {/* Rating */}
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex items-center">
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium mr-1">
-                {product.rating.average.toFixed(1)}
+          {product.rating && (
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center">
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-medium mr-1">
+                  {product.rating.average?.toFixed(1) || '0.0'}
+                </span>
+              </div>
+              <span className="text-sm text-gray-500">
+                ({product.rating.count || 0} ביקורות)
               </span>
             </div>
-            <span className="text-sm text-gray-500">
-              ({product.rating.count})
-            </span>
-          </div>
+          )}
 
           {/* Price */}
           <div className="mb-3">
-            {hasDiscount && (
+            {hasDiscount && product.originalPrice?.ils && (
               <span className="text-sm text-gray-400 line-through ml-2">
-                ₪{product.price.original.toFixed(2)}
+                ₪{product.originalPrice.ils.toFixed(2)}
               </span>
             )}
             <span className="text-2xl font-bold text-blue-600">
-              ₪{product.price.ils.toFixed(2)}
+              ₪{product.price?.ils?.toFixed(2) || '0.00'}
             </span>
           </div>
 
@@ -101,20 +120,18 @@ export default function ProductCard({ product }) {
           <Button
             className="w-full"
             onClick={handleAddToCart}
-            disabled={adding || !product.stock.available
-            }
+            disabled={adding || !product.stock?.available}
           >
             {adding ? (
               'מוסיף...'
-            ) : product.stock.available
-              ? (
-                <>
-                  <ShoppingCart className="h-4 w-4 ml-2" />
-                  הוסף לעגלה
-                </>
-              ) : (
-                'אזל מהמלאי'
-              )}
+            ) : product.stock?.available ? (
+              <>
+                <ShoppingCart className="h-4 w-4 ml-2" />
+                הוסף לעגלה
+              </>
+            ) : (
+              'אזל מהמלאי'
+            )}
           </Button>
         </div>
       </div>

@@ -8,27 +8,49 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { 
-  Star, 
-  ShoppingCart, 
-  Heart, 
-  Truck, 
+import {
+  Star,
+  ShoppingCart,
+  Heart,
+  Truck,
   Package,
   Shield,
   RotateCcw,
   Plus,
-  Minus
+  Minus,
+  Clock,
+  Plane,
+  CheckCircle,
+  Info,
+  Globe
 } from 'lucide-react';
 
 export default function ProductDetails({ product }) {
   const { addToCart } = useCart();
-  const [selectedImage, setSelectedImage] = useState(product.images?.main || '/placeholder.png');
+
+  // תמיכה בשני מבני תמונות
+  const getImageData = () => {
+    if (Array.isArray(product.images)) {
+      const primaryImage = product.images.find(img => img.isPrimary) || product.images[0];
+      return {
+        main: primaryImage?.url || '/placeholder.png',
+        gallery: product.images.filter(img => !img.isPrimary).map(img => img.url)
+      };
+    }
+    return {
+      main: product.images?.main || '/placeholder.png',
+      gallery: product.images?.gallery || []
+    };
+  };
+
+  const imageData = getImageData();
+  const [selectedImage, setSelectedImage] = useState(imageData.main);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [trackingClick, setTrackingClick] = useState(false);
 
-  const hasDiscount = product.price.discount > 0;
-  const freeShipping = product.shipping.cost === 0;
+  const hasDiscount = product.discount > 0;
+  const freeShipping = product.shipping?.freeShipping || false;
 
   // Handle Add to Cart
   const handleAddToCart = async () => {
@@ -50,8 +72,7 @@ export default function ProductDetails({ product }) {
   // Handle Buy on Amazon
   const handleAmazonClick = async () => {
     setTrackingClick(true);
-    
-    // Track click for statistics
+
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product._id}/click`, {
         method: 'POST'
@@ -62,8 +83,7 @@ export default function ProductDetails({ product }) {
       setTrackingClick(false);
     }
 
-    // Open Amazon link in new tab
-    window.open(product.links.affiliateUrl || product.links.amazon, '_blank', 'noopener,noreferrer');
+    window.open(product.links?.affiliateUrl || product.links?.amazon, '_blank', 'noopener,noreferrer');
   };
 
   // Quantity handlers
@@ -86,25 +106,33 @@ export default function ProductDetails({ product }) {
         {/* תמונה ראשית */}
         <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
           {selectedImage && selectedImage !== '/placeholder.png' ? (
-            <Image
-              src={selectedImage}
-              alt={product.name_he}
-              fill
-              className="object-contain p-8"
-              priority
-              sizes="(max-width: 768px) 100vw, 50vw"
-            />
+            selectedImage.startsWith('data:') ? (
+              <img
+                src={selectedImage}
+                alt={product.name_he}
+                className="w-full h-full object-contain p-8"
+              />
+            ) : (
+              <Image
+                src={selectedImage}
+                alt={product.name_he}
+                fill
+                className="object-contain p-8"
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+            )
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400 text-lg">
               אין תמונה זמינה
             </div>
           )}
-          
+
           {/* Badges on Image */}
           <div className="absolute top-4 right-4 flex flex-col gap-2">
             {hasDiscount && (
               <Badge className="bg-red-500 text-white shadow-lg">
-                -{product.price.discount}%
+                -{product.discount}%
               </Badge>
             )}
             {freeShipping && (
@@ -117,61 +145,79 @@ export default function ProductDetails({ product }) {
                 מומלץ
               </Badge>
             )}
+            <Badge className="bg-purple-500 text-white shadow-lg flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              מארה&quot;ב
+            </Badge>
           </div>
         </div>
 
         {/* תמונות ממוזערות */}
-        {product.images.gallery && product.images.gallery.length > 0 && (
+        {(imageData.gallery && imageData.gallery.length > 0) || imageData.main !== '/placeholder.png' ? (
           <div className="grid grid-cols-4 gap-2">
-            {/* Main image thumbnail */}
-            {product.images?.main && (
+            {imageData.main && imageData.main !== '/placeholder.png' && (
               <button
-                onClick={() => setSelectedImage(product.images.main)}
+                onClick={() => setSelectedImage(imageData.main)}
                 className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all hover:border-blue-400 ${
-                  selectedImage === product.images.main
+                  selectedImage === imageData.main
                     ? 'border-blue-600 ring-2 ring-blue-200'
                     : 'border-gray-200'
                 }`}
               >
-                <Image
-                  src={product.images.main}
-                  alt={product.name_he}
-                  fill
-                  className="object-contain p-2"
-                  sizes="100px"
-                />
+                {imageData.main.startsWith('data:') ? (
+                  <img
+                    src={imageData.main}
+                    alt={product.name_he}
+                    className="w-full h-full object-contain p-2"
+                  />
+                ) : (
+                  <Image
+                    src={imageData.main}
+                    alt={product.name_he}
+                    fill
+                    className="object-contain p-2"
+                    sizes="100px"
+                  />
+                )}
               </button>
             )}
 
-            {/* Gallery thumbnails */}
-            {product.images.gallery.slice(0, 3).map((image, index) => (
+            {imageData.gallery.slice(0, 3).map((image, index) => (
               <button
                 key={index}
                 onClick={() => setSelectedImage(image)}
                 className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all hover:border-blue-400 ${
-                  selectedImage === image 
-                    ? 'border-blue-600 ring-2 ring-blue-200' 
+                  selectedImage === image
+                    ? 'border-blue-600 ring-2 ring-blue-200'
                     : 'border-gray-200'
                 }`}
               >
-                <Image
-                  src={image}
-                  alt={`${product.name_he} ${index + 2}`}
-                  fill
-                  className="object-contain p-2"
-                  sizes="100px"
-                />
+                {image.startsWith('data:') ? (
+                  <img
+                    src={image}
+                    alt={`${product.name_he} ${index + 2}`}
+                    className="w-full h-full object-contain p-2"
+                  />
+                ) : (
+                  <Image
+                    src={image}
+                    alt={`${product.name_he} ${index + 2}`}
+                    fill
+                    className="object-contain p-2"
+                    sizes="100px"
+                  />
+                )}
               </button>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* פרטים */}
       <div className="space-y-6">
         {/* כותרת */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <Badge variant="outline" className="text-xs">
               {product.category === 'electronics' ? 'אלקטרוניקה' :
                product.category === 'fashion' ? 'אופנה' :
@@ -183,6 +229,10 @@ export default function ProductDetails({ product }) {
             {product.asin && (
               <span className="text-xs text-gray-500">ASIN: {product.asin}</span>
             )}
+            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-300">
+              <Globe className="w-3 h-3 mr-1" />
+              יבוא אישי מארה&quot;ב
+            </Badge>
           </div>
 
           <h1 className="text-3xl lg:text-4xl font-bold mb-3 leading-tight">
@@ -196,7 +246,7 @@ export default function ProductDetails({ product }) {
                 <Star
                   key={i}
                   className={`h-5 w-5 ${
-                    i < Math.round(product.rating.average)
+                    i < Math.round(product.rating?.average || 0)
                       ? 'fill-yellow-400 text-yellow-400'
                       : 'fill-gray-200 text-gray-200'
                   }`}
@@ -204,91 +254,152 @@ export default function ProductDetails({ product }) {
               ))}
             </div>
             <span className="text-sm font-medium">
-              {product.rating.average.toFixed(1)}
+              {(product.rating?.average || 0).toFixed(1)}
             </span>
             <span className="text-sm text-gray-500">
-              ({product.rating.count.toLocaleString()} ביקורות)
+              ({(product.rating?.count || 0).toLocaleString()} ביקורות)
             </span>
           </div>
-
-          {/* Stats */}
-          {product.stats && product.stats.sales > 0 && (
-            <p className="text-sm text-gray-600">
-              נמכרו {product.stats.sales.toLocaleString()} יחידות
-            </p>
-          )}
         </div>
 
         <Separator />
 
         {/* מחיר */}
-        <div className="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border-2 border-blue-200">
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-4xl lg:text-5xl font-bold text-blue-600">
-              ₪{product.price.ils.toFixed(2)}
+              ₪{product.price?.ils?.toFixed(2) || '0.00'}
             </span>
-            {hasDiscount && (
+            {hasDiscount && product.originalPrice?.ils && (
               <>
                 <span className="text-xl text-gray-400 line-through">
-                  ₪{product.price.original.toFixed(2)}
+                  ₪{product.originalPrice.ils.toFixed(2)}
                 </span>
                 <Badge className="bg-red-500 text-white">
-                  חסוך {product.price.discount}%
+                  חסוך {product.discount}%
                 </Badge>
               </>
             )}
           </div>
-          <p className="text-sm text-gray-600">
-            מחיר באמזון: ${product.price.usd.toFixed(2)} (כולל המרה)
-          </p>
-          {hasDiscount && (
-            <p className="text-sm text-green-600 font-semibold mt-1">
-              חסכון של ₪{(product.price.original - product.price.ils).toFixed(2)}!
-            </p>
-          )}
-        </div>
 
-        {/* משלוח */}
-        <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <Truck className="h-6 w-6 text-blue-600 flex-shrink-0" />
-          <div className="flex-1">
-            {freeShipping ? (
-              <>
-                <p className="font-semibold text-blue-900">משלוח חינם!</p>
-                <p className="text-sm text-blue-700">
-                  משלוח עד הבית תוך {product.shipping.estimatedDays} ימי עסקים
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold text-blue-900">
-                  משלוח: ₪{product.shipping.cost.toFixed(2)}
-                </p>
-                <p className="text-sm text-blue-700">
-                  אספקה תוך {product.shipping.estimatedDays} ימי עסקים
-                </p>
-              </>
-            )}
+          <div className="space-y-2 text-sm">
+            <div className="bg-white/70 backdrop-blur rounded-md p-3 border border-blue-200">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-900">
+                  <p className="font-semibold mb-1">המחיר כולל:</p>
+                  <ul className="space-y-0.5">
+                    <li>✓ מחיר המוצר מהספק</li>
+                    <li>✓ משלוח בינלאומי מארה&quot;ב/אירופה</li>
+                    <li>✓ מכס ומע&quot;מ (18%)</li>
+                    <li>✓ טיפול ושירות</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* מלאי */}
+        {/* משלוח ותהליך */}
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <Clock className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-amber-900 mb-1">זמן אספקה משוער</p>
+              <p className="text-sm text-amber-800">
+                14-21 ימי עסקים (כולל משלוח בינלאומי ומכס)
+              </p>
+            </div>
+          </div>
+
+          {/* תהליך השילוח */}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200 p-4">
+            <h4 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+              <Plane className="w-4 h-4" />
+              מסלול המשלוח שלך
+            </h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-purple-700 font-bold text-[10px]">1</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-purple-900">אישור הזמנה</p>
+                  <p className="text-purple-700">אנחנו מאמתים את ההזמנה ומבצעים רכישה מהספק</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-purple-700 font-bold text-[10px]">2</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-purple-900">הזמנה מהספק</p>
+                  <p className="text-purple-700">המוצר נרכש ונשלח לחברת השילוח שלנו בארה&quot;ב/אירופה</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-purple-700 font-bold text-[10px]">3</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-purple-900">בחברת השילוח</p>
+                  <p className="text-purple-700">המוצר מתקבל בארה&quot;ב/אירופה ונארז למשלוח בינלאומי</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-purple-700 font-bold text-[10px]">4</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-purple-900">במרכז לוגיסטי בישראל</p>
+                  <p className="text-purple-700">המשלוח עבר מכס והגיע למרכז החלוקה</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-purple-700 font-bold text-[10px]">5</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-purple-900">במשלוח אליך</p>
+                  <p className="text-purple-700">המוצר בדרך לכתובת שלך</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle className="w-3 h-3 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-900">הגיע!</p>
+                  <p className="text-green-700">המוצר התקבל בהצלחה</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-purple-200">
+              <p className="text-xs text-purple-700">
+                <strong>שימו לב:</strong> תקבלו עדכוני SMS ומייל בכל שלב + מספר מעקב בינלאומי
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* זמינות */}
         <div>
-          {product.stock.available ? (
-            <div className="flex items-center gap-2 text-green-600">
-              <Package className="h-5 w-5" />
-              <span className="font-semibold">במלאי - משלוח מיידי</span>
+          {product.stock?.available ? (
+            <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-semibold">זמין להזמנה - נרכש עבורך מיד לאחר האישור</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-red-600">
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
               <Package className="h-5 w-5" />
-              <span className="font-semibold">אזל מהמלאי</span>
+              <span className="font-semibold">כרגע לא זמין - נעדכן כשיחזור למלאי</span>
             </div>
-          )}
-          {product.stock.quantity && product.stock.quantity < 10 && (
-            <p className="text-sm text-orange-600 mt-1">
-              נותרו רק {product.stock.quantity} יחידות במלאי!
-            </p>
           )}
         </div>
 
@@ -329,9 +440,9 @@ export default function ProductDetails({ product }) {
         <div className="space-y-3">
           <Button
             size="lg"
-            className="w-full text-lg h-14"
+            className="w-full text-lg h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
             onClick={handleAddToCart}
-            disabled={adding || !product.stock.available}
+            disabled={adding || !product.stock?.available}
           >
             {adding ? (
               <>
@@ -341,23 +452,7 @@ export default function ProductDetails({ product }) {
             ) : (
               <>
                 <ShoppingCart className="h-5 w-5 ml-2" />
-                הוסף {quantity > 1 ? `${quantity} ` : ''}לעגלה
-              </>
-            )}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full text-lg h-14"
-            onClick={handleAmazonClick}
-            disabled={trackingClick}
-          >
-            {trackingClick ? (
-              'פותח...'
-            ) : (
-              <>
-                🛒 קנה באמזון
+                הזמן עכשיו {quantity > 1 ? `(${quantity} יחידות)` : ''}
               </>
             )}
           </Button>
@@ -374,24 +469,24 @@ export default function ProductDetails({ product }) {
 
         {/* Trust Badges */}
         <div className="grid grid-cols-3 gap-3 pt-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
+          <div className="text-center p-3 bg-gray-50 rounded-lg border">
             <Shield className="h-6 w-6 mx-auto mb-1 text-blue-600" />
             <p className="text-xs font-semibold">תשלום מאובטח</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
+          <div className="text-center p-3 bg-gray-50 rounded-lg border">
             <RotateCcw className="h-6 w-6 mx-auto mb-1 text-blue-600" />
             <p className="text-xs font-semibold">החזרה תוך 30 יום</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
+          <div className="text-center p-3 bg-gray-50 rounded-lg border">
             <Truck className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-            <p className="text-xs font-semibold">משלוח מהיר</p>
+            <p className="text-xs font-semibold">מעקב מלא</p>
           </div>
         </div>
 
         <Separator />
 
         {/* מפרט טכני */}
-        {product.specifications && Object.keys(product.specifications).length > 0 && (
+        {product.specifications && Object.keys(product.specifications).filter(key => product.specifications[key]).length > 0 && (
           <div>
             <h3 className="font-bold text-xl mb-4">מפרט טכני</h3>
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -406,8 +501,7 @@ export default function ProductDetails({ product }) {
                          key === 'weight' ? 'משקל' :
                          key === 'dimensions' ? 'מידות' :
                          key === 'material' ? 'חומר' :
-                         key === 'model' ? 'דגם' :
-                         key === 'warranty' ? 'אחריות' : key}
+                         key === 'model' ? 'דגם' : key}
                       </dt>
                       <dd className="font-semibold text-gray-900">{value}</dd>
                     </div>
@@ -441,7 +535,7 @@ export default function ProductDetails({ product }) {
       {/* תיאור מלא */}
       <div className="md:col-span-2 space-y-6">
         <Separator />
-        
+
         <div>
           <h2 className="text-3xl font-bold mb-6">תיאור המוצר</h2>
           <div className="prose max-w-none">
@@ -454,12 +548,12 @@ export default function ProductDetails({ product }) {
         {/* Additional Info */}
         <div className="grid md:grid-cols-2 gap-6 pt-6">
           <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h4 className="font-bold text-lg mb-3 text-blue-900">מידע נוסף</h4>
+            <h4 className="font-bold text-lg mb-3 text-blue-900">איך זה עובד?</h4>
             <ul className="space-y-2 text-sm text-blue-800">
-              <li>• מוצר מקורי ישירות מאמזון</li>
-              <li>• אחריות יבואן רשמי</li>
-              <li>• שירות לקוחות בעברית</li>
-              <li>• החזרה חינם תוך 30 יום</li>
+              <li>• אנחנו רוכשים עבורך מספקים בארה&quot;ב/אירופה</li>
+              <li>• המוצר נשלח לחברת השילוח שלנו בחו&quot;ל</li>
+              <li>• משלוח בינלאומי לישראל דרך מכס</li>
+              <li>• משלוח עד הבית - ללא טרחה</li>
             </ul>
           </div>
 
@@ -467,9 +561,9 @@ export default function ProductDetails({ product }) {
             <h4 className="font-bold text-lg mb-3 text-green-900">למה לקנות אצלנו?</h4>
             <ul className="space-y-2 text-sm text-green-800">
               <li>• מחירים טובים יותר מחנויות בישראל</li>
-              <li>• משלוח מהיר עד הבית</li>
-              <li>• בדקנו - איכות מובטחת</li>
-              <li>• תמיכה מלאה לאחר הרכישה</li>
+              <li>• גישה למוצרים שלא זמינים בארץ</li>
+              <li>• שקיפות מלאה - מעקב בכל שלב</li>
+              <li>• תמיכה בעברית לאורך כל הדרך</li>
             </ul>
           </div>
         </div>

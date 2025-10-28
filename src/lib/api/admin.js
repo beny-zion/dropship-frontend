@@ -8,45 +8,37 @@ export const adminApi = {
   // ============================================
 
   getDashboardStats: async () => {
-    const response = await apiClient.get('/admin/dashboard/stats');
-    // Return the data object directly
-    return response.data?.data || response.data;
+    return await apiClient.get('/admin/dashboard/stats', {
+      params: { _t: Date.now() }
+    });
   },
 
   getRecentOrders: async (limit = 10) => {
-    const response = await apiClient.get('/admin/dashboard/recent-orders', {
-      params: { limit }
+    return await apiClient.get('/admin/dashboard/recent-orders', {
+      params: { limit, _t: Date.now() }
     });
-    // Return the data array directly, not the wrapper object
-    return response.data?.data || response.data || [];
   },
 
   getTopProducts: async (limit = 5) => {
-    const response = await apiClient.get('/admin/dashboard/top-products', {
-      params: { limit }
+    return await apiClient.get('/admin/dashboard/top-products', {
+      params: { limit, _t: Date.now() }
     });
-    // Return the data array directly, not the wrapper object
-    return response.data?.data || response.data || [];
   },
 
   getSalesChart: async (period = 7) => {
-    const response = await apiClient.get('/admin/dashboard/sales-chart', {
-      params: { period }
+    return await apiClient.get('/admin/dashboard/sales-chart', {
+      params: { period, _t: Date.now() }
     });
-    // Return the data array directly, not the wrapper object
-    return response.data?.data || response.data || [];
   },
 
   getRevenueByCategory: async () => {
-    const response = await apiClient.get('/admin/dashboard/revenue-by-category');
-    return response.data;
+    return await apiClient.get('/admin/dashboard/revenue-by-category');
   },
 
   getUserGrowth: async (period = 30) => {
-    const response = await apiClient.get('/admin/dashboard/user-growth', {
+    return await apiClient.get('/admin/dashboard/user-growth', {
       params: { period }
     });
-    return response.data;
   },
 
   // ============================================
@@ -54,49 +46,47 @@ export const adminApi = {
   // ============================================
 
   getAllProducts: async (params = {}) => {
-    const response = await apiClient.get('/admin/products', { params });
-    // Return the full response (includes data and pagination)
-    return response.data;
+    return await apiClient.get('/admin/products', { params });
   },
 
   getProductById: async (id) => {
-    const response = await apiClient.get(`/admin/products/${id}`);
-    return response.data;
+    return await apiClient.get(`/admin/products/${id}`);
   },
 
   createProduct: async (productData) => {
-    const response = await apiClient.post('/admin/products', productData);
-    return response.data;
+    return await apiClient.post('/admin/products', productData);
   },
 
   updateProduct: async (id, productData) => {
-    const response = await apiClient.put(`/admin/products/${id}`, productData);
-    return response.data;
+    return await apiClient.put(`/admin/products/${id}`, productData);
   },
 
   deleteProduct: async (id) => {
-    const response = await apiClient.delete(`/admin/products/${id}`);
-    return response.data;
+    return await apiClient.delete(`/admin/products/${id}`);
   },
 
   updateStock: async (id, stockData) => {
-    const response = await apiClient.patch(`/admin/products/${id}/stock`, stockData);
-    return response.data;
+    return await apiClient.patch(`/admin/products/${id}/stock`, stockData);
   },
 
   toggleFeatured: async (id) => {
-    const response = await apiClient.patch(`/admin/products/${id}/featured`);
-    return response.data;
+    return await apiClient.patch(`/admin/products/${id}/featured`);
   },
 
   updateProductStatus: async (id, status) => {
-    const response = await apiClient.patch(`/admin/products/${id}/status`, { status });
-    return response.data;
+    return await apiClient.patch(`/admin/products/${id}/status`, { status });
   },
 
   bulkDeleteProducts: async (productIds) => {
-    const response = await apiClient.post('/admin/products/bulk-delete', { productIds });
-    return response.data;
+    return await apiClient.post('/admin/products/bulk-delete', { productIds });
+  },
+
+  // ============================================
+  // IMAGE UPLOAD
+  // ============================================
+
+  uploadImage: async (imageData) => {
+    return await apiClient.post('/upload/image', imageData);
   },
 
   // ============================================
@@ -104,38 +94,31 @@ export const adminApi = {
   // ============================================
 
   getOrderStats: async () => {
-    const response = await apiClient.get('/admin/orders/stats');
-    return response.data;
+    return await apiClient.get('/admin/orders/stats');
   },
 
   getAllOrders: async (params = {}) => {
-    const response = await apiClient.get('/admin/orders', { params });
-    return response.data;
+    return await apiClient.get('/admin/orders', { params });
   },
 
   getOrderById: async (id) => {
-    const response = await apiClient.get(`/admin/orders/${id}`);
-    return response.data;
+    return await apiClient.get(`/admin/orders/${id}`);
   },
 
   updateOrderStatus: async (id, status) => {
-    const response = await apiClient.put(`/admin/orders/${id}/status`, { status });
-    return response.data;
+    return await apiClient.put(`/admin/orders/${id}/status`, { status });
   },
 
   updateTracking: async (id, trackingData) => {
-    const response = await apiClient.put(`/admin/orders/${id}/tracking`, trackingData);
-    return response.data;
+    return await apiClient.put(`/admin/orders/${id}/tracking`, trackingData);
   },
 
   addOrderNotes: async (id, notes) => {
-    const response = await apiClient.post(`/admin/orders/${id}/notes`, { notes });
-    return response.data;
+    return await apiClient.post(`/admin/orders/${id}/notes`, { notes });
   },
 
   cancelOrder: async (id) => {
-    const response = await apiClient.delete(`/admin/orders/${id}`);
-    return response.data;
+    return await apiClient.delete(`/admin/orders/${id}`);
   },
 
   // ============================================
@@ -143,28 +126,23 @@ export const adminApi = {
   // ============================================
 
   getUsersStats: async () => {
-    const response = await apiClient.get('/admin/users/stats');
-    return response.data;
+    return await apiClient.get('/admin/users/stats');
   },
 
   getAllUsers: async (params = {}) => {
-    const response = await apiClient.get('/admin/users', { params });
-    return response.data;
+    return await apiClient.get('/admin/users', { params });
   },
 
   getUserById: async (id) => {
-    const response = await apiClient.get(`/admin/users/${id}`);
-    return response.data;
+    return await apiClient.get(`/admin/users/${id}`);
   },
 
   getUserOrders: async (id, params = {}) => {
-    const response = await apiClient.get(`/admin/users/${id}/orders`, { params });
-    return response.data;
+    return await apiClient.get(`/admin/users/${id}/orders`, { params });
   },
 
   updateUserStatus: async (id, status) => {
-    const response = await apiClient.patch(`/admin/users/${id}/status`, { status });
-    return response.data;
+    return await apiClient.patch(`/admin/users/${id}/status`, { status });
   }
 };
 

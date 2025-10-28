@@ -9,14 +9,7 @@ import client from './client.js';
  * @returns {Promise} User profile data with order statistics
  */
 export const getProfile = async () => {
-  const response = await client.get('/users/profile');
-
-  // Handle both response formats
-  if (response.data?.data) {
-    return response.data.data; // {success: true, data: {...}}
-  }
-
-  return response.data; // Already extracted by axios
+  return await client.get('/users/profile');
 };
 
 /**
@@ -25,8 +18,7 @@ export const getProfile = async () => {
  * @returns {Promise} Updated user data
  */
 export const updateProfile = async (profileData) => {
-  const { data } = await client.put('/users/profile', profileData);
-  return data;
+  return await client.put('/users/profile', profileData);
 };
 
 /**
@@ -35,8 +27,7 @@ export const updateProfile = async (profileData) => {
  * @returns {Promise} Success response
  */
 export const changePassword = async (passwords) => {
-  const { data } = await client.put('/users/change-password', passwords);
-  return data;
+  return await client.put('/users/change-password', passwords);
 };
 
 /**
@@ -45,8 +36,7 @@ export const changePassword = async (passwords) => {
  * @returns {Promise} Updated preferences
  */
 export const updatePreferences = async (preferences) => {
-  const { data } = await client.put('/users/preferences', preferences);
-  return data;
+  return await client.put('/users/preferences', preferences);
 };
 
 /**
@@ -55,10 +45,9 @@ export const updatePreferences = async (preferences) => {
  * @returns {Promise} Success response
  */
 export const deleteAccount = async (password) => {
-  const { data } = await client.delete('/users/account', {
+  return await client.delete('/users/account', {
     data: { password }
   });
-  return data;
 };
 
 // ==================== ADDRESSES ====================
@@ -68,8 +57,7 @@ export const deleteAccount = async (password) => {
  * @returns {Promise} Array of addresses
  */
 export const getAddresses = async () => {
-  const response = await client.get('/users/addresses');
-  return response.data || [];
+  return await client.get('/users/addresses');
 };
 
 /**
@@ -78,8 +66,7 @@ export const getAddresses = async () => {
  * @returns {Promise} Address data
  */
 export const getAddress = async (id) => {
-  const { data } = await client.get(`/users/addresses/${id}`);
-  return data;
+  return await client.get(`/users/addresses/${id}`);
 };
 
 /**
@@ -87,8 +74,7 @@ export const getAddress = async (id) => {
  * @returns {Promise} Default address data
  */
 export const getDefaultAddress = async () => {
-  const { data} = await client.get('/users/addresses/default');
-  return data;
+  return await client.get('/users/addresses/default');
 };
 
 /**
@@ -97,8 +83,7 @@ export const getDefaultAddress = async () => {
  * @returns {Promise} Created address
  */
 export const createAddress = async (address) => {
-  const { data } = await client.post('/users/addresses', address);
-  return data;
+  return await client.post('/users/addresses', address);
 };
 
 /**
@@ -108,8 +93,7 @@ export const createAddress = async (address) => {
  * @returns {Promise} Updated address
  */
 export const updateAddress = async (id, address) => {
-  const { data } = await client.put(`/users/addresses/${id}`, address);
-  return data;
+  return await client.put(`/users/addresses/${id}`, address);
 };
 
 /**
@@ -118,8 +102,7 @@ export const updateAddress = async (id, address) => {
  * @returns {Promise} Success response
  */
 export const deleteAddress = async (id) => {
-  const { data } = await client.delete(`/users/addresses/${id}`);
-  return data;
+  return await client.delete(`/users/addresses/${id}`);
 };
 
 /**
@@ -128,8 +111,7 @@ export const deleteAddress = async (id) => {
  * @returns {Promise} Updated address
  */
 export const setDefaultAddress = async (id) => {
-  const { data } = await client.put(`/users/addresses/${id}/default`);
-  return data;
+  return await client.put(`/users/addresses/${id}/default`);
 };
 
 // ==================== TYPES (for documentation) ====================

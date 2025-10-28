@@ -23,7 +23,9 @@ export default function AdminDashboard() {
     queryFn: async () => {
       try {
         const result = await adminApi.getDashboardStats();
-        console.log('✅ Dashboard Stats:', result);
+        console.log('✅ Dashboard Stats RAW:', result);
+        console.log('✅ Dashboard Stats TYPE:', typeof result);
+        console.log('✅ Dashboard Stats KEYS:', result ? Object.keys(result) : 'null');
         return result;
       } catch (err) {
         console.error('❌ Dashboard Stats Error:', err);
@@ -40,7 +42,8 @@ export default function AdminDashboard() {
     queryFn: async () => {
       try {
         const result = await adminApi.getRecentOrders();
-        console.log('✅ Recent Orders:', result);
+        console.log('✅ Recent Orders RAW:', result);
+        console.log('✅ Recent Orders TYPE:', typeof result, Array.isArray(result));
         return result;
       } catch (err) {
         console.error('❌ Recent Orders Error:', err);
@@ -96,9 +99,9 @@ export default function AdminDashboard() {
     );
   }
 
-  const overview = stats?.overview || {};
-  const growth = stats?.growth || {};
-  const alerts = stats?.alerts || {};
+  const overview = stats?.data?.overview || {};
+  const growth = stats?.data?.growth || {};
+  const alerts = stats?.data?.alerts || {};
 
   // Debug logs
   console.log('📊 Dashboard Data:', {
@@ -106,9 +109,9 @@ export default function AdminDashboard() {
     overview,
     growth,
     alerts,
-    recentOrders: Array.isArray(recentOrders) ? `Array(${recentOrders.length})` : typeof recentOrders,
-    topProducts: Array.isArray(topProducts) ? `Array(${topProducts.length})` : typeof topProducts,
-    salesData: Array.isArray(salesData) ? `Array(${salesData.length})` : typeof salesData
+    recentOrders: Array.isArray(recentOrders?.data) ? `Array(${recentOrders.data.length})` : typeof recentOrders,
+    topProducts: Array.isArray(topProducts?.data) ? `Array(${topProducts.data.length})` : typeof topProducts,
+    salesData: Array.isArray(salesData?.data) ? `Array(${salesData.data.length})` : typeof salesData
   });
 
   // Show errors if any
@@ -185,20 +188,20 @@ export default function AdminDashboard() {
         {/* Sales Chart */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold mb-4">מכירות - 7 ימים אחרונים</h2>
-          <SalesChart data={salesData || []} />
+          <SalesChart data={salesData?.data || []} />
         </div>
 
         {/* Top Products */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold mb-4">מוצרים מובילים</h2>
-          <TopProducts products={topProducts || []} />
+          <TopProducts products={topProducts?.data || []} />
         </div>
       </div>
 
       {/* Recent Orders */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-lg font-semibold mb-4">הזמנות אחרונות</h2>
-        <RecentOrders orders={recentOrders || []} />
+        <RecentOrders orders={recentOrders?.data || []} />
       </div>
     </div>
   );

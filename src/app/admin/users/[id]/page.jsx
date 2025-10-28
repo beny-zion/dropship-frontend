@@ -129,10 +129,14 @@ export default function UserDetailPage() {
               {user.firstName} {user.lastName}
             </h1>
             <p className="text-gray-600 mt-1">
-              הצטרף {formatDistanceToNow(new Date(user.createdAt), {
-                addSuffix: true,
-                locale: he
-              })}
+              הצטרף {user.createdAt && !isNaN(new Date(user.createdAt).getTime()) ? (
+                formatDistanceToNow(new Date(user.createdAt), {
+                  addSuffix: true,
+                  locale: he
+                })
+              ) : (
+                'לא זמין'
+              )}
             </p>
           </div>
         </div>
@@ -190,7 +194,7 @@ export default function UserDetailPage() {
                   <span className="text-sm">תאריך הצטרפות</span>
                 </div>
                 <p className="font-medium">
-                  {new Date(user.createdAt).toLocaleDateString('he-IL')}
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString('he-IL') : 'לא זמין'}
                 </p>
               </div>
 
@@ -210,7 +214,7 @@ export default function UserDetailPage() {
                   <span className="text-sm">עדכון אחרון</span>
                 </div>
                 <p className="font-medium">
-                  {new Date(user.updatedAt).toLocaleDateString('he-IL')}
+                  {user.updatedAt ? new Date(user.updatedAt).toLocaleDateString('he-IL') : 'לא זמין'}
                 </p>
               </div>
             </div>
@@ -252,7 +256,7 @@ export default function UserDetailPage() {
                   <tbody>
                     {orders.map((order) => (
                       <tr
-                        key={order._id}
+                        key={order._id?.toString() || order.id || order.orderNumber}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
                         <td className="py-3 px-4">
@@ -262,7 +266,7 @@ export default function UserDetailPage() {
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-sm text-gray-700">
-                            {new Date(order.createdAt).toLocaleDateString('he-IL')}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('he-IL') : '-'}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -277,7 +281,7 @@ export default function UserDetailPage() {
                         </td>
                         <td className="py-3 px-4">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/orders/${order._id}`}>
+                            <Link href={`/admin/orders/${String(order._id || order.id)}`}>
                               צפייה
                             </Link>
                           </Button>
@@ -382,12 +386,12 @@ export default function UserDetailPage() {
                 <div className="flex-1">
                   <p className="text-sm text-gray-700">הצטרף למערכת</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(user.createdAt).toLocaleString('he-IL')}
+                    {user.createdAt ? new Date(user.createdAt).toLocaleString('he-IL') : 'לא זמין'}
                   </p>
                 </div>
               </div>
 
-              {user.updatedAt !== user.createdAt && (
+              {user.updatedAt && user.updatedAt !== user.createdAt && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
                   <div className="flex-1">
@@ -399,7 +403,7 @@ export default function UserDetailPage() {
                 </div>
               )}
 
-              {orders.length > 0 && (
+              {orders.length > 0 && orders[0].createdAt && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
                   <div className="flex-1">

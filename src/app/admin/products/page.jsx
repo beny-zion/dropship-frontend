@@ -13,7 +13,6 @@ import {
   Search,
   Edit,
   Trash2,
-  Eye,
   Package,
   AlertCircle,
   Star,
@@ -79,7 +78,15 @@ export default function ProductsManagementPage() {
   console.log('📦 Products Page Data:', {
     rawData: data,
     productsCount: products.length,
-    pagination
+    pagination,
+    sampleProduct: products[0],
+    productIds: products.slice(0, 3).map(p => ({
+      _id: p._id,
+      _idType: typeof p._id,
+      _idToString: p._id?.toString?.(),
+      id: p.id,
+      asin: p.asin
+    }))
   });
 
   const handleDelete = (id, name) => {
@@ -191,14 +198,18 @@ export default function ProductsManagementPage() {
                 <tbody>
                   {products.map((product) => (
                     <tr
-                      key={product._id}
+                      key={product._id?.toString() || product.id || product.asin}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       {/* Image */}
                       <td className="py-3 px-4">
-                        {product.images?.[0] ? (
+                        {product.images?.length > 0 ? (
                           <img
-                            src={product.images[0]}
+                            src={
+                              typeof product.images[0] === 'string'
+                                ? product.images[0]
+                                : product.images.find(img => img.isPrimary)?.url || product.images[0]?.url
+                            }
                             alt={product.name_he}
                             className="w-12 h-12 object-cover rounded"
                           />
@@ -232,24 +243,30 @@ export default function ProductsManagementPage() {
                       {/* Price */}
                       <td className="py-3 px-4">
                         <span className="font-semibold text-gray-900">
-                          ₪{product.price?.toLocaleString()}
+                          ₪{(product.price?.ils || 0).toLocaleString()}
                         </span>
                       </td>
 
                       {/* Stock */}
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm ${
-                            product.stock?.quantity < 10
-                              ? 'text-red-600 font-semibold'
-                              : 'text-gray-700'
-                          }`}>
-                            {product.stock?.quantity || 0}
+                        {product.stock?.trackInventory ? (
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm ${
+                              product.stock?.quantity < 10
+                                ? 'text-red-600 font-semibold'
+                                : 'text-gray-700'
+                            }`}>
+                              {product.stock?.quantity || 0}
+                            </span>
+                            {product.stock?.quantity < 10 && (
+                              <AlertCircle className="w-4 h-4 text-red-500" />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-500">
+                            לא עוקב
                           </span>
-                          {product.stock?.quantity < 10 && (
-                            <AlertCircle className="w-4 h-4 text-red-500" />
-                          )}
-                        </div>
+                        )}
                       </td>
 
                       {/* Status */}
@@ -265,7 +282,7 @@ export default function ProductsManagementPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toggleFeaturedMutation.mutate(product._id)}
+                            onClick={() => toggleFeaturedMutation.mutate(String(product._id || product.id))}
                             title={product.featured ? 'הסר מומלץ' : 'סמן כמומלץ'}
                           >
                             {product.featured ? (
@@ -275,14 +292,14 @@ export default function ProductsManagementPage() {
                             )}
                           </Button>
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/products/${product._id}`}>
+                            <Link href={`/admin/products/${String(product._id || product.id)}`}>
                               <Edit className="w-4 h-4" />
                             </Link>
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(product._id, product.name_he)}
+                            onClick={() => handleDelete(String(product._id || product.id), product.name_he)}
                             disabled={deleteMutation.isPending}
                           >
                             <Trash2 className="w-4 h-4 text-red-600" />

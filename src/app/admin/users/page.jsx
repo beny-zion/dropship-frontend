@@ -204,7 +204,7 @@ export default function UsersManagementPage() {
                 <tbody>
                   {users.map((user) => (
                     <tr
-                      key={user._id}
+                      key={user._id?.toString() || user.id || user.email}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       {/* User */}
@@ -263,13 +263,17 @@ export default function UsersManagementPage() {
                       <td className="py-3 px-4">
                         <div>
                           <p className="text-sm text-gray-700">
-                            {new Date(user.createdAt).toLocaleDateString('he-IL')}
+                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString('he-IL') : 'לא זמין'}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {formatDistanceToNow(new Date(user.createdAt), {
-                              addSuffix: true,
-                              locale: he
-                            })}
+                            {user.createdAt && !isNaN(new Date(user.createdAt).getTime()) ? (
+                              formatDistanceToNow(new Date(user.createdAt), {
+                                addSuffix: true,
+                                locale: he
+                              })
+                            ) : (
+                              '-'
+                            )}
                           </p>
                         </div>
                       </td>
@@ -277,7 +281,7 @@ export default function UsersManagementPage() {
                       {/* Actions */}
                       <td className="py-3 px-4">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/admin/users/${user._id}`}>
+                          <Link href={`/admin/users/${String(user._id || user.id)}`}>
                             <Eye className="w-4 h-4 ml-1" />
                             צפייה
                           </Link>

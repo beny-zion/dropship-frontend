@@ -190,7 +190,7 @@ export default function OrdersManagementPage() {
                 <tbody>
                   {orders.map((order) => (
                     <tr
-                      key={order._id}
+                      key={order._id?.toString() || order.id || order.orderNumber}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       {/* Order Number */}
@@ -237,13 +237,17 @@ export default function OrdersManagementPage() {
                       <td className="py-3 px-4">
                         <div>
                           <p className="text-sm text-gray-700">
-                            {new Date(order.createdAt).toLocaleDateString('he-IL')}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('he-IL') : 'לא זמין'}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {formatDistanceToNow(new Date(order.createdAt), {
-                              addSuffix: true,
-                              locale: he
-                            })}
+                            {order.createdAt && !isNaN(new Date(order.createdAt).getTime()) ? (
+                              formatDistanceToNow(new Date(order.createdAt), {
+                                addSuffix: true,
+                                locale: he
+                              })
+                            ) : (
+                              '-'
+                            )}
                           </p>
                         </div>
                       </td>
@@ -251,7 +255,7 @@ export default function OrdersManagementPage() {
                       {/* Actions */}
                       <td className="py-3 px-4">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/admin/orders/${order._id}`}>
+                          <Link href={`/admin/orders/${String(order._id || order.id)}`}>
                             <Eye className="w-4 h-4 ml-1" />
                             צפייה
                           </Link>
