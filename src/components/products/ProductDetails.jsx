@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import {
-  Star,
   ShoppingCart,
   Heart,
   Truck,
@@ -44,21 +43,120 @@ export default function ProductDetails({ product }) {
   };
 
   const imageData = getImageData();
+  const galleryImages = [imageData.main, ...imageData.gallery].filter(img => img && img !== '/placeholder.png');
+
   const [selectedImage, setSelectedImage] = useState(imageData.main);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [trackingClick, setTrackingClick] = useState(false);
 
+  // Variant selection
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedSize, setSelectedSize] = useState(null);
+
   const hasDiscount = product.discount > 0;
   const freeShipping = product.shipping?.freeShipping || false;
+  const hasVariants = product.variants && product.variants.length > 0;
+
+  // Get available colors and sizes
+  const availableColors = hasVariants
+    ? [...new Set(product.variants.filter(v => v.stock?.available).map(v => v.color).filter(Boolean))]
+    : [];
+
+  const availableSizes = hasVariants && selectedColor
+    ? [...new Set(product.variants.filter(v => v.color === selectedColor && v.stock?.available).map(v => v.size).filter(Boolean))]
+    : hasVariants
+    ? [...new Set(product.variants.filter(v => v.stock?.available).map(v => v.size).filter(Boolean))]
+    : [];
+
+  // Update selected variant when color or size changes
+  const updateSelectedVariant = (color, size) => {
+    if (!hasVariants) return;
+
+    const variant = product.variants.find(v =>
+      v.color === color && v.size === size && v.stock?.available
+    );
+
+    if (variant) {
+      setSelectedVariant(variant);
+      // Update image if variant has images
+      if (variant.images && variant.images.length > 0) {
+        const primaryImg = variant.images.find(img => img.isPrimary) || variant.images[0];
+        setSelectedImage(primaryImg.url);
+      }
+    }
+  };
+
+  // Handle color selection - עדכון מיידי של התמונה הראשית בלבד
+  const handleColorSelect = (color) => {
+    setSelectedColor(color);
+
+    // מצא ווריאנט עם הצבע הנבחר ועדכן רק את התמונה הראשית
+    const variantWithColor = product.variants?.find(v => v.color === color);
+    if (variantWithColor?.images && variantWithColor.images.length > 0) {
+      const primaryImg = variantWithColor.images.find(img => img.isPrimary) || variantWithColor.images[0];
+      setSelectedImage(primaryImg.url);
+    }
+
+    if (selectedSize) {
+      updateSelectedVariant(color, selectedSize);
+    } else if (availableSizes.length === 1) {
+      // Auto-select if only one size available
+      setSelectedSize(availableSizes[0]);
+      updateSelectedVariant(color, availableSizes[0]);
+    }
+  };
+
+  // Handle size selection
+  const handleSizeSelect = (size) => {
+    setSelectedSize(size);
+    if (selectedColor) {
+      updateSelectedVariant(selectedColor, size);
+    } else if (availableColors.length === 1) {
+      // Auto-select if only one color available
+      setSelectedColor(availableColors[0]);
+      updateSelectedVariant(availableColors[0], size);
+    }
+  };
+
+  // Calculate current price (base + variant additional cost)
+  const getCurrentPrice = () => {
+    const basePrice = product.price?.ils || 0;
+    const additionalCost = selectedVariant?.additionalCost?.ils || 0;
+    return basePrice + additionalCost;
+  };
+
+  const currentPrice = getCurrentPrice();
 
   // Handle Add to Cart
   const handleAddToCart = async () => {
+    // Validate variant selection if product has variants
+    if (hasVariants) {
+      if (!selectedColor && availableColors.length > 0) {
+        toast.error('אנא בחר צבע');
+        return;
+      }
+      if (!selectedSize && availableSizes.length > 0) {
+        toast.error('אנא בחר מידה');
+        return;
+      }
+      if (!selectedVariant) {
+        toast.error('אנא בחר ווריאנט');
+        return;
+      }
+    }
+
     setAdding(true);
     try {
-      addToCart(product, quantity);
+      addToCart(product, quantity, selectedVariant?.sku);
+      const variantText = selectedVariant
+        ? ` - ${selectedColor} ${selectedSize}`
+        : '';
       toast.success(`${quantity} פריטים נוספו לעגלה!`, {
-        description: product.name_he,
+        description: product.name_he + variantText,
         duration: 3000,
       });
     } catch (error) {
@@ -86,9 +184,25 @@ export default function ProductDetails({ product }) {
     window.open(product.links?.affiliateUrl || product.links?.amazon, '_blank', 'noopener,noreferrer');
   };
 
+  // Image zoom handlers
+  const handleMouseEnter = () => {
+    setIsZoomed(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsZoomed(false);
+  };
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setMousePosition({ x, y });
+  };
+
   // Quantity handlers
   const increaseQuantity = () => {
-    if (quantity < 10) {
+    if (quantity < 2) {
       setQuantity(prev => prev + 1);
     }
   };
@@ -100,89 +214,87 @@ export default function ProductDetails({ product }) {
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+    <div className="grid md:grid-cols-2 gap-4 lg:gap-6">
       {/* תמונות */}
-      <div className="space-y-4">
-        {/* תמונה ראשית */}
-        <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+      <div className="space-y-2 md:space-y-3">
+        {/* תמונה ראשית עם זום */}
+        <div
+          className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 cursor-zoom-in"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onMouseMove={handleMouseMove}
+        >
           {selectedImage && selectedImage !== '/placeholder.png' ? (
             selectedImage.startsWith('data:') ? (
               <img
                 src={selectedImage}
                 alt={product.name_he}
-                className="w-full h-full object-contain p-8"
+                className={`w-full h-full object-contain p-4 md:p-8 transition-transform duration-200 ${
+                  isZoomed ? 'scale-150' : 'scale-100'
+                }`}
+                style={
+                  isZoomed
+                    ? {
+                        transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                      }
+                    : {}
+                }
               />
             ) : (
-              <Image
-                src={selectedImage}
-                alt={product.name_he}
-                fill
-                className="object-contain p-8"
-                priority
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
+              <div className="relative w-full h-full">
+                <Image
+                  src={selectedImage}
+                  alt={product.name_he}
+                  fill
+                  className={`object-contain p-4 md:p-8 transition-transform duration-200 ${
+                    isZoomed ? 'scale-150' : 'scale-100'
+                  }`}
+                  style={
+                    isZoomed
+                      ? {
+                          transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                        }
+                      : {}
+                  }
+                  priority
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+              </div>
             )
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 text-lg">
+            <div className="flex items-center justify-center h-full text-gray-400 text-sm md:text-lg">
               אין תמונה זמינה
             </div>
           )}
 
           {/* Badges on Image */}
-          <div className="absolute top-4 right-4 flex flex-col gap-2">
+          <div className="absolute top-2 md:top-4 right-2 md:right-4 flex flex-col gap-1.5 md:gap-2">
             {hasDiscount && (
-              <Badge className="bg-red-500 text-white shadow-lg">
+              <Badge className="bg-red-500 text-white shadow-lg text-xs">
                 -{product.discount}%
               </Badge>
             )}
             {freeShipping && (
-              <Badge className="bg-green-500 text-white shadow-lg">
+              <Badge className="bg-green-500 text-white shadow-lg text-xs">
                 משלוח חינם
               </Badge>
             )}
             {product.featured && (
-              <Badge className="bg-blue-500 text-white shadow-lg">
+              <Badge className="bg-blue-500 text-white shadow-lg text-xs">
                 מומלץ
               </Badge>
             )}
-            <Badge className="bg-purple-500 text-white shadow-lg flex items-center gap-1">
+            <Badge className="bg-purple-500 text-white shadow-lg flex items-center gap-1 text-xs">
               <Globe className="w-3 h-3" />
               מארה&quot;ב
             </Badge>
           </div>
         </div>
 
-        {/* תמונות ממוזערות */}
-        {(imageData.gallery && imageData.gallery.length > 0) || imageData.main !== '/placeholder.png' ? (
-          <div className="grid grid-cols-4 gap-2">
-            {imageData.main && imageData.main !== '/placeholder.png' && (
-              <button
-                onClick={() => setSelectedImage(imageData.main)}
-                className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all hover:border-blue-400 ${
-                  selectedImage === imageData.main
-                    ? 'border-blue-600 ring-2 ring-blue-200'
-                    : 'border-gray-200'
-                }`}
-              >
-                {imageData.main.startsWith('data:') ? (
-                  <img
-                    src={imageData.main}
-                    alt={product.name_he}
-                    className="w-full h-full object-contain p-2"
-                  />
-                ) : (
-                  <Image
-                    src={imageData.main}
-                    alt={product.name_he}
-                    fill
-                    className="object-contain p-2"
-                    sizes="100px"
-                  />
-                )}
-              </button>
-            )}
-
-            {imageData.gallery.slice(0, 3).map((image, index) => (
+        {/* תמונות ממוזערות - תמיד מציג את כל תמונות המוצר */}
+        {galleryImages.length > 0 && (
+          <div className="grid grid-cols-4 gap-1.5 md:gap-2">
+            {galleryImages.slice(0, 4).map((image, index) => (
               <button
                 key={index}
                 onClick={() => setSelectedImage(image)}
@@ -195,26 +307,96 @@ export default function ProductDetails({ product }) {
                 {image.startsWith('data:') ? (
                   <img
                     src={image}
-                    alt={`${product.name_he} ${index + 2}`}
-                    className="w-full h-full object-contain p-2"
+                    alt={`${product.name_he} ${index + 1}`}
+                    className="w-full h-full object-contain p-1.5 md:p-2"
                   />
                 ) : (
                   <Image
                     src={image}
-                    alt={`${product.name_he} ${index + 2}`}
+                    alt={`${product.name_he} ${index + 1}`}
                     fill
-                    className="object-contain p-2"
-                    sizes="100px"
+                    className="object-contain p-1.5 md:p-2"
+                    sizes="(max-width: 768px) 25vw, 100px"
                   />
                 )}
               </button>
             ))}
           </div>
-        ) : null}
+        )}
+
+        {/* Variant Selectors - מתחת לגלריה */}
+        {hasVariants && (
+          <div className="space-y-2 md:space-y-3">
+            {/* Color Selector */}
+            {availableColors.length > 0 && (
+              <div>
+                <Label className="text-sm font-semibold mb-2 block">
+                  בחר צבע {selectedColor && `(${selectedColor})`}
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {availableColors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => handleColorSelect(color)}
+                      className={`px-3 py-1.5 text-sm rounded-lg border-2 transition-all font-medium ${
+                        selectedColor === color
+                          ? 'border-blue-600 bg-blue-50 text-blue-900'
+                          : 'border-gray-200 hover:border-blue-300 bg-white'
+                      }`}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Size Selector */}
+            {availableSizes.length > 0 && (
+              <div>
+                <Label className="text-sm font-semibold mb-2 block">
+                  בחר מידה {selectedSize && `(${selectedSize})`}
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {availableSizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => handleSizeSelect(size)}
+                      className={`px-3 py-1.5 text-sm rounded-lg border-2 transition-all font-medium min-w-[50px] ${
+                        selectedSize === size
+                          ? 'border-blue-600 bg-blue-50 text-blue-900'
+                          : 'border-gray-200 hover:border-blue-300 bg-white'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Selected Variant Info */}
+            {selectedVariant && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+                <div className="flex items-center gap-2 text-green-800">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-xs font-medium">
+                    זמין במלאי - {selectedColor} {selectedSize}
+                  </span>
+                </div>
+                {selectedVariant.additionalCost?.ils > 0 && (
+                  <p className="text-xs text-green-700 mt-1">
+                    מחיר: ₪{getCurrentPrice().toFixed(2)} (כולל תוספת)
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* פרטים */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* כותרת */}
         <div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -238,37 +420,15 @@ export default function ProductDetails({ product }) {
           <h1 className="text-3xl lg:text-4xl font-bold mb-3 leading-tight">
             {product.name_he}
           </h1>
-
-          {/* Rating */}
-          <div className="flex items-center gap-4 mb-2">
-            <div className="flex items-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-5 w-5 ${
-                    i < Math.round(product.rating?.average || 0)
-                      ? 'fill-yellow-400 text-yellow-400'
-                      : 'fill-gray-200 text-gray-200'
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-sm font-medium">
-              {(product.rating?.average || 0).toFixed(1)}
-            </span>
-            <span className="text-sm text-gray-500">
-              ({(product.rating?.count || 0).toLocaleString()} ביקורות)
-            </span>
-          </div>
         </div>
 
         <Separator />
 
         {/* מחיר */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border-2 border-blue-200">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-4xl lg:text-5xl font-bold text-blue-600">
-              ₪{product.price?.ils?.toFixed(2) || '0.00'}
+              ₪{currentPrice.toFixed(2)}
             </span>
             {hasDiscount && product.originalPrice?.ils && (
               <>
@@ -299,6 +459,124 @@ export default function ProductDetails({ product }) {
             </div>
           </div>
         </div>
+
+        {/* תיאור המוצר */}
+        {product.description_he && (
+          <div>
+            <h3 className="font-bold text-xl mb-3">תיאור המוצר</h3>
+            <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-line bg-gray-50 p-4 rounded-lg border border-gray-200">
+              {product.description_he}
+            </div>
+          </div>
+        )}
+
+        {/* Quantity Selector and Add to Cart */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border-2 border-green-200 space-y-3">
+          {/* Quantity Selector */}
+          <div>
+            <Label className="text-sm font-semibold mb-2 block">בחר כמות</Label>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={decreaseQuantity}
+                disabled={quantity <= 1}
+                className="h-10 w-10 bg-white hover:bg-gray-50"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <div className="flex-1 text-center bg-white rounded-lg py-2 border border-gray-200">
+                <span className="text-xl font-bold text-gray-900">{quantity}</span>
+                <span className="text-xs text-gray-500 mr-2">יחידות</span>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={increaseQuantity}
+                disabled={quantity >= 2}
+                className="h-10 w-10 bg-white hover:bg-gray-50"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-gray-600 mt-1.5 text-center">
+              מקסימום 2 יחידות להזמנה
+            </p>
+          </div>
+
+          {/* Add to Cart Button */}
+          <Button
+            size="lg"
+            className="w-full text-base md:text-lg h-12 md:h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+            onClick={handleAddToCart}
+            disabled={adding || !product.stock?.available}
+          >
+            {adding ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2"></div>
+                מוסיף לעגלה...
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-5 w-5 ml-2" />
+                הזמן עכשיו {quantity > 1 ? `(${quantity} יחידות)` : ''}
+              </>
+            )}
+          </Button>
+
+          {/* Price reminder */}
+          <div className="text-center pt-2 border-t border-green-300">
+            <p className="text-sm font-semibold text-gray-700">
+              סה"כ לתשלום: <span className="text-blue-600 text-lg">₪{(currentPrice * quantity).toFixed(2)}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* תכונות */}
+        {product.features && product.features.length > 0 && (
+          <div>
+            <h3 className="font-bold text-xl mb-3">תכונות עיקריות</h3>
+            <ul className="space-y-2 bg-green-50 rounded-lg p-4 border border-green-200">
+              {product.features.map((feature, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <span className="text-green-600 mt-0.5 flex-shrink-0">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <span className="text-gray-800 leading-relaxed">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* מפרט טכני */}
+        {product.specifications && Object.keys(product.specifications).filter(key => product.specifications[key]).length > 0 && (
+          <div>
+            <h3 className="font-bold text-xl mb-3">מפרט טכני</h3>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <dl className="grid grid-cols-1 gap-2 text-sm">
+                {Object.entries(product.specifications).map(([key, value]) => (
+                  value && (
+                    <div key={key} className="flex justify-between border-b border-gray-200 pb-2 last:border-0">
+                      <dt className="text-gray-600 font-medium">
+                        {key === 'brand' ? 'מותג' :
+                         key === 'color' ? 'צבע' :
+                         key === 'size' ? 'גודל' :
+                         key === 'weight' ? 'משקל' :
+                         key === 'dimensions' ? 'מידות' :
+                         key === 'material' ? 'חומר' :
+                         key === 'model' ? 'דגם' : key}
+                      </dt>
+                      <dd className="font-semibold text-gray-900">{value}</dd>
+                    </div>
+                  )
+                ))}
+              </dl>
+            </div>
+          </div>
+        )}
 
         {/* משלוח ותהליך */}
         <div className="space-y-3">
@@ -391,76 +669,26 @@ export default function ProductDetails({ product }) {
         {/* זמינות */}
         <div>
           {product.stock?.available ? (
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg border border-green-200">
-              <CheckCircle className="h-5 w-5" />
-              <span className="font-semibold">זמין להזמנה - נרכש עבורך מיד לאחר האישור</span>
+            <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2.5 rounded-lg border border-green-200">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-semibold">זמין להזמנה - נרכש עבורך מיד לאחר האישור</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
-              <Package className="h-5 w-5" />
-              <span className="font-semibold">כרגע לא זמין - נעדכן כשיחזור למלאי</span>
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200">
+              <Package className="h-4 w-4" />
+              <span className="text-sm font-semibold">כרגע לא זמין - נעדכן כשיחזור למלאי</span>
             </div>
           )}
         </div>
 
         <Separator />
 
-        {/* Quantity Selector */}
+        {/* כפתור מועדפים */}
         <div>
-          <Label className="text-base font-semibold mb-3 block">כמות</Label>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={decreaseQuantity}
-              disabled={quantity <= 1}
-              className="h-12 w-12"
-            >
-              <Minus className="h-5 w-5" />
-            </Button>
-            <div className="flex-1 text-center">
-              <span className="text-2xl font-bold">{quantity}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={increaseQuantity}
-              disabled={quantity >= 10}
-              className="h-12 w-12"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-          </div>
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            מקסימום 10 יחידות להזמנה
-          </p>
-        </div>
-
-        {/* כפתורי פעולה */}
-        <div className="space-y-3">
           <Button
+            variant="outline"
             size="lg"
-            className="w-full text-lg h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            onClick={handleAddToCart}
-            disabled={adding || !product.stock?.available}
-          >
-            {adding ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2"></div>
-                מוסיף לעגלה...
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="h-5 w-5 ml-2" />
-                הזמן עכשיו {quantity > 1 ? `(${quantity} יחידות)` : ''}
-              </>
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="lg"
-            className="w-full text-lg h-12"
+            className="w-full text-base md:text-lg h-10 md:h-12 border-2"
           >
             <Heart className="h-5 w-5 ml-2" />
             הוסף למועדפים
@@ -468,119 +696,21 @@ export default function ProductDetails({ product }) {
         </div>
 
         {/* Trust Badges */}
-        <div className="grid grid-cols-3 gap-3 pt-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg border">
-            <Shield className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-            <p className="text-xs font-semibold">תשלום מאובטח</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="text-center p-2 bg-gray-50 rounded-lg border">
+            <Shield className="h-5 w-5 mx-auto mb-1 text-blue-600" />
+            <p className="text-[10px] md:text-xs font-semibold">תשלום מאובטח</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg border">
-            <RotateCcw className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-            <p className="text-xs font-semibold">החזרה תוך 30 יום</p>
+          <div className="text-center p-2 bg-gray-50 rounded-lg border">
+            <RotateCcw className="h-5 w-5 mx-auto mb-1 text-blue-600" />
+            <p className="text-[10px] md:text-xs font-semibold">החזרה תוך 30 יום</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg border">
-            <Truck className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-            <p className="text-xs font-semibold">מעקב מלא</p>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* מפרט טכני */}
-        {product.specifications && Object.keys(product.specifications).filter(key => product.specifications[key]).length > 0 && (
-          <div>
-            <h3 className="font-bold text-xl mb-4">מפרט טכני</h3>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <dl className="grid grid-cols-1 gap-3 text-sm">
-                {Object.entries(product.specifications).map(([key, value]) => (
-                  value && (
-                    <div key={key} className="flex justify-between border-b border-gray-200 pb-2 last:border-0">
-                      <dt className="text-gray-600 font-medium">
-                        {key === 'brand' ? 'מותג' :
-                         key === 'color' ? 'צבע' :
-                         key === 'size' ? 'גודל' :
-                         key === 'weight' ? 'משקל' :
-                         key === 'dimensions' ? 'מידות' :
-                         key === 'material' ? 'חומר' :
-                         key === 'model' ? 'דגם' : key}
-                      </dt>
-                      <dd className="font-semibold text-gray-900">{value}</dd>
-                    </div>
-                  )
-                ))}
-              </dl>
-            </div>
-          </div>
-        )}
-
-        {/* תכונות */}
-        {product.features && product.features.length > 0 && (
-          <div>
-            <h3 className="font-bold text-xl mb-4">תכונות עיקריות</h3>
-            <ul className="space-y-3 bg-green-50 rounded-lg p-4 border border-green-200">
-              {product.features.map((feature, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <span className="text-green-600 mt-0.5 flex-shrink-0">
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </span>
-                  <span className="text-gray-800 leading-relaxed">{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-
-      {/* תיאור מלא */}
-      <div className="md:col-span-2 space-y-6">
-        <Separator />
-
-        <div>
-          <h2 className="text-3xl font-bold mb-6">תיאור המוצר</h2>
-          <div className="prose max-w-none">
-            <div className="text-gray-700 leading-relaxed whitespace-pre-line bg-gray-50 p-6 rounded-lg border border-gray-200">
-              {product.description_he}
-            </div>
+          <div className="text-center p-2 bg-gray-50 rounded-lg border">
+            <Truck className="h-5 w-5 mx-auto mb-1 text-blue-600" />
+            <p className="text-[10px] md:text-xs font-semibold">מעקב מלא</p>
           </div>
         </div>
 
-        {/* Additional Info */}
-        <div className="grid md:grid-cols-2 gap-6 pt-6">
-          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h4 className="font-bold text-lg mb-3 text-blue-900">איך זה עובד?</h4>
-            <ul className="space-y-2 text-sm text-blue-800">
-              <li>• אנחנו רוכשים עבורך מספקים בארה&quot;ב/אירופה</li>
-              <li>• המוצר נשלח לחברת השילוח שלנו בחו&quot;ל</li>
-              <li>• משלוח בינלאומי לישראל דרך מכס</li>
-              <li>• משלוח עד הבית - ללא טרחה</li>
-            </ul>
-          </div>
-
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-            <h4 className="font-bold text-lg mb-3 text-green-900">למה לקנות אצלנו?</h4>
-            <ul className="space-y-2 text-sm text-green-800">
-              <li>• מחירים טובים יותר מחנויות בישראל</li>
-              <li>• גישה למוצרים שלא זמינים בארץ</li>
-              <li>• שקיפות מלאה - מעקב בכל שלב</li>
-              <li>• תמיכה בעברית לאורך כל הדרך</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Product Tags */}
-        {product.tags && product.tags.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-3">תגיות:</h4>
-            <div className="flex flex-wrap gap-2">
-              {product.tags.map((tag, index) => (
-                <Badge key={index} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

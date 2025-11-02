@@ -393,10 +393,10 @@ export default function ImageUpload({
             <div className="flex gap-2">
               <input
                 type="url"
-                value={imageUrl || ''}
-                onChange={(e) => setImageUrl(e.target.value || '')}
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://example.com/image.jpg"
-                disabled={!!(uploading || safeImages.length >= maxImages)}
+                disabled={uploading || safeImages.length >= maxImages}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {

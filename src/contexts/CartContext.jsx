@@ -32,7 +32,7 @@ export function CartProvider({ children }) {
 
   // Add to cart mutation
   const addMutation = useMutation({
-    mutationFn: ({ productId, quantity }) => cartApi.addToCart(productId, quantity),
+    mutationFn: ({ productId, quantity, variantSku }) => cartApi.addToCart(productId, quantity, variantSku),
     onSuccess: () => {
       queryClient.invalidateQueries(['cart']);
     },
@@ -43,7 +43,7 @@ export function CartProvider({ children }) {
 
   // Update quantity mutation
   const updateMutation = useMutation({
-    mutationFn: ({ productId, quantity }) => cartApi.updateCartItem(productId, quantity),
+    mutationFn: ({ productId, quantity, variantSku }) => cartApi.updateCartItem(productId, quantity, variantSku),
     onSuccess: () => {
       queryClient.invalidateQueries(['cart']);
     }
@@ -51,7 +51,7 @@ export function CartProvider({ children }) {
 
   // Remove mutation
   const removeMutation = useMutation({
-    mutationFn: (productId) => cartApi.removeFromCart(productId),
+    mutationFn: ({ productId, variantSku }) => cartApi.removeFromCart(productId, variantSku),
     onSuccess: () => {
       queryClient.invalidateQueries(['cart']);
     }
@@ -66,16 +66,18 @@ export function CartProvider({ children }) {
   });
 
   // Helper functions
-  const addToCart = async (product, quantity = 1) => {
+  const addToCart = async (product, quantity = 1, variantSku = null) => {
     if (!isAuthenticated) {
       toast.error('נא להתחבר תחילה');
       return;
     }
 
     try {
+      // Server-side middleware handles ObjectId serialization
       await addMutation.mutateAsync({
         productId: product._id,
-        quantity
+        quantity,
+        variantSku
       });
       toast.success('המוצר נוסף לעגלה!');
     } catch (error) {
@@ -84,18 +86,18 @@ export function CartProvider({ children }) {
     }
   };
 
-  const updateQuantity = async (productId, quantity) => {
+  const updateQuantity = async (productId, quantity, variantSku = null) => {
     try {
-      await updateMutation.mutateAsync({ productId, quantity });
+      await updateMutation.mutateAsync({ productId, quantity, variantSku });
     } catch (error) {
       toast.error('שגיאה בעדכון כמות');
       throw error;
     }
   };
 
-  const removeFromCart = async (productId) => {
+  const removeFromCart = async (productId, variantSku = null) => {
     try {
-      await removeMutation.mutateAsync(productId);
+      await removeMutation.mutateAsync({ productId, variantSku });
       toast.success('המוצר הוסר מהעגלה');
     } catch (error) {
       toast.error('שגיאה בהסרה מהעגלה');

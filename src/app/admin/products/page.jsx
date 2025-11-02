@@ -230,7 +230,9 @@ export default function ProductsManagementPage() {
                             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">{product.category}</p>
+                        <p className="text-xs text-gray-500">
+                          {product.category?.name?.he || product.categoryLegacy || 'ללא קטגוריה'}
+                        </p>
                       </td>
 
                       {/* ASIN */}

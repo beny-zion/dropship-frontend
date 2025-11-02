@@ -4,15 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
-const CATEGORIES = [
-  { value: 'all', label: 'כל הקטגוריות' },
-  { value: 'electronics', label: 'אלקטרוניקה' },
-  { value: 'fashion', label: 'אופנה ותיקים' },
-  { value: 'home', label: 'בית ומטבח' },
-  { value: 'sports', label: 'ספורט וכושר' },
-  { value: 'automotive', label: 'רכב וכלים' },
-];
+import { useCategories } from '@/lib/hooks/useCategories';
 
 const SORT_OPTIONS = [
   { value: '-createdAt', label: 'חדשים ביותר' },
@@ -22,11 +14,19 @@ const SORT_OPTIONS = [
   { value: 'popular', label: 'הכי פופולרי' },
 ];
 
-export default function ProductFilters({ 
-  filters, 
-  onFilterChange, 
-  onReset 
+export default function ProductFilters({
+  filters,
+  onFilterChange,
+  onReset
 }) {
+  const { categories, loading: categoriesLoading } = useCategories(true); // Only active categories
+
+  // Prepare categories list
+  const categoryOptions = [
+    { _id: 'all', name: { he: 'כל הקטגוריות' } },
+    ...(categories || [])
+  ];
+
   return (
     <div className="bg-white p-6 rounded-lg border space-y-4">
       <div className="flex items-center justify-between">
@@ -42,14 +42,20 @@ export default function ProductFilters({
         <Select
           value={filters.category || 'all'}
           onValueChange={(value) => onFilterChange('category', value)}
+          disabled={categoriesLoading}
         >
           <SelectTrigger>
-            <SelectValue />
+            <SelectValue>
+              {categoriesLoading
+                ? 'טוען...'
+                : categoryOptions.find(c => c._id === filters.category)?.name.he || 'בחר קטגוריה'
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat.value} value={cat.value}>
-                {cat.label}
+            {categoryOptions.map((cat) => (
+              <SelectItem key={cat._id} value={cat._id}>
+                {cat.name.he}
               </SelectItem>
             ))}
           </SelectContent>

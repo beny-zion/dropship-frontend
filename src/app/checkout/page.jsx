@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Check, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -45,7 +46,10 @@ export default function CheckoutPage() {
   const [saveAddress, setSaveAddress] = useState(true); // Save address by default
 
   const { data: addressesData, isLoading: addressesLoading } = useAddresses();
-  const addresses = addressesData || [];
+  // Handle both array and object with data property
+  const addresses = Array.isArray(addressesData)
+    ? addressesData
+    : (addressesData?.data || []);
   const createAddressMutation = useCreateAddress();
 
   const {
@@ -109,6 +113,7 @@ export default function CheckoutPage() {
       const orderData = {
         items: cart.items.map(item => ({
           product: item.product._id,
+          variantSku: item.variantSku || null, // ⭐ העבר את ה-variantSku
           quantity: item.quantity,
         })),
         shippingAddress: data,
@@ -120,6 +125,8 @@ export default function CheckoutPage() {
       const response = await createOrder(orderData);
 
       if (response.success) {
+        console.log('✅ Order created successfully:', response.data);
+
         // Save address if requested and not using existing address
         if (saveAddress && !selectedAddressId) {
           try {
@@ -141,10 +148,15 @@ export default function CheckoutPage() {
           }
         }
 
+        const orderId = response.data._id;
+        console.log('🔄 Redirecting to order page:', orderId);
+
         toast.success('ההזמנה נוצרה בהצלחה!');
         // Invalidate cart query to refresh - server already cleared it
         queryClient.invalidateQueries({ queryKey: ['cart'] });
-        router.push(`/orders/${response.data._id}`);
+
+        // Redirect to order page
+        router.push(`/orders/${orderId}`);
       }
     } catch (error) {
       console.error('Order error:', error);
@@ -468,32 +480,69 @@ export default function CheckoutPage() {
               <CardContent>
                 {/* Items */}
                 <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-                  {cart.items.map((item) => (
-                    <div key={item.product._id} className="flex gap-3">
-                      <div className="relative h-16 w-16 bg-gray-100 rounded flex-shrink-0">
-                        {item.product.images?.main ? (
-                          <Image
-                            src={item.product.images.main}
-                            alt={item.product.name_he}
-                            fill
-                            className="object-contain p-1"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-xs text-gray-400">
-                            אין תמונה
-                          </div>
-                        )}
+                  {cart.items.map((item) => {
+                    // יצירת key ייחודי שכולל גם variantSku
+                    const itemKey = item.variantSku
+                      ? `${item.product._id}-${item.variantSku}`
+                      : item.product._id;
+
+                    // קבלת תמונה - ווריאנט או כללית
+                    let imageUrl = null;
+                    if (item.variantSku && item.product.variants) {
+                      const variant = item.product.variants.find(v => v.sku === item.variantSku);
+                      if (variant?.images?.length > 0) {
+                        const primaryImage = variant.images.find(img => img.isPrimary);
+                        imageUrl = primaryImage?.url || variant.images[0]?.url;
+                      }
+                    }
+                    if (!imageUrl) {
+                      imageUrl = item.product.images?.[0]?.url || item.product.images?.main;
+                    }
+
+                    return (
+                      <div key={itemKey} className="flex gap-3">
+                        <div className="relative h-16 w-16 bg-gray-100 rounded flex-shrink-0">
+                          {imageUrl ? (
+                            <Image
+                              src={imageUrl}
+                              alt={item.product.name_he}
+                              fill
+                              className="object-contain p-1"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-xs text-gray-400">
+                              אין תמונה
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium line-clamp-2">
+                            {item.product.name_he}
+                          </p>
+
+                          {/* Variant Details */}
+                          {item.variant && (
+                            <div className="flex gap-2 mt-1 mb-1">
+                              {item.variant.color && (
+                                <Badge variant="outline" className="text-xs py-0 px-1 h-5">
+                                  {item.variant.color}
+                                </Badge>
+                              )}
+                              {item.variant.size && (
+                                <Badge variant="outline" className="text-xs py-0 px-1 h-5">
+                                  {item.variant.size}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          <p className="text-sm text-gray-500">
+                            {item.quantity} × ₪{item.price?.toFixed(2) || '0.00'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium line-clamp-2">
-                          {item.product.name_he}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {item.quantity} × ₪{item.price?.toFixed(2) || '0.00'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Separator className="my-4" />
@@ -501,11 +550,11 @@ export default function CheckoutPage() {
                 {/* Totals */}
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">סכום ביניים:</span>
+                    <span className="text-gray-600">סכום ביניים (כולל מע״מ):</span>
                     <span>₪{cart.pricing?.subtotal?.toFixed(2) || '0.00'}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">מע״מ:</span>
+                  <div className="flex justify-between text-xs text-gray-500 pr-4">
+                    <span>מתוכו מע״מ (18%):</span>
                     <span>₪{cart.pricing?.tax?.toFixed(2) || '0.00'}</span>
                   </div>
                   <div className="flex justify-between text-sm">

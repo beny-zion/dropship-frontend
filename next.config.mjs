@@ -18,7 +18,17 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
       },
+      {
+        protocol: 'https',
+        hostname: '**.s5a.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'image.s5a.com',
+      },
     ],
+    // אפשר כל דומיין חיצוני (לא מומלץ לפרודקשן, רק לפיתוח)
+    unoptimized: false,
   },
 };
 

@@ -18,7 +18,11 @@ import { toast } from 'sonner';
 export const useAddresses = () => {
   return useQuery({
     queryKey: ['addresses'],
-    queryFn: getAddresses,
+    queryFn: async () => {
+      const response = await getAddresses();
+      // Extract data array from response
+      return response?.data || [];
+    },
     staleTime: 2 * 60 * 1000 // 2 minutes
   });
 };
@@ -64,7 +68,9 @@ export const useCreateAddress = () => {
       // Optimistically update
       queryClient.setQueryData(['addresses'], (old) => {
         if (!old) return old;
-        return [...old, { ...newAddress, _id: 'temp-' + Date.now() }];
+        // Handle both array and object with data property
+        const addresses = Array.isArray(old) ? old : (old.data || []);
+        return [...addresses, { ...newAddress, _id: 'temp-' + Date.now() }];
       });
 
       return { previousAddresses };
@@ -99,7 +105,9 @@ export const useUpdateAddress = () => {
       // Optimistic update
       queryClient.setQueryData(['addresses'], (old) => {
         if (!old) return old;
-        return old.map((addr) =>
+        // Handle both array and object with data property
+        const addresses = Array.isArray(old) ? old : (old.data || []);
+        return addresses.map((addr) =>
           addr._id === id ? { ...addr, ...data } : addr
         );
       });
@@ -135,7 +143,9 @@ export const useDeleteAddress = () => {
       // Optimistic update
       queryClient.setQueryData(['addresses'], (old) => {
         if (!old) return old;
-        return old.filter((addr) => addr._id !== id);
+        // Handle both array and object with data property
+        const addresses = Array.isArray(old) ? old : (old.data || []);
+        return addresses.filter((addr) => addr._id !== id);
       });
 
       return { previousAddresses };
@@ -169,7 +179,9 @@ export const useSetDefaultAddress = () => {
       // Optimistic update
       queryClient.setQueryData(['addresses'], (old) => {
         if (!old) return old;
-        return old.map((addr) => ({
+        // Handle both array and object with data property
+        const addresses = Array.isArray(old) ? old : (old.data || []);
+        return addresses.map((addr) => ({
           ...addr,
           isDefault: addr._id === id
         }));

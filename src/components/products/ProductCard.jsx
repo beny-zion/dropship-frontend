@@ -15,6 +15,7 @@ export default function ProductCard({ product }) {
 
   const hasDiscount = product.discount > 0;
   const freeShipping = product.shipping?.freeShipping || product.shipping?.cost === 0;
+  const hasVariants = product.variants && product.variants.length > 0; // ⭐ חדש
 
   // Helper to get primary image URL
   const getPrimaryImageUrl = () => {
@@ -32,9 +33,15 @@ export default function ProductCard({ product }) {
 
   const imageUrl = getPrimaryImageUrl();
 
-  // ⭐ חדש
+  // ⭐ חדש - הוספה לעגלה רק למוצרים ללא וריאנטים
   const handleAddToCart = async (e) => {
     e.preventDefault(); // Prevent navigation
+
+    // אם יש וריאנטים, אל תאפשר הוספה לעגלה - הגדרה לא נחוצה כי הכפתור משתנה
+    if (hasVariants) {
+      return; // This shouldn't happen as button changes, but safety check
+    }
+
     setAdding(true);
 
     try {
@@ -116,23 +123,39 @@ export default function ProductCard({ product }) {
             </span>
           </div>
 
-          {/* ⭐ Add to Cart Button */}
-          <Button
-            className="w-full"
-            onClick={handleAddToCart}
-            disabled={adding || !product.stock?.available}
-          >
-            {adding ? (
-              'מוסיף...'
-            ) : product.stock?.available ? (
-              <>
-                <ShoppingCart className="h-4 w-4 ml-2" />
-                הוסף לעגלה
-              </>
-            ) : (
-              'אזל מהמלאי'
-            )}
-          </Button>
+          {/* ⭐ Add to Cart Button / View Product Button */}
+          {hasVariants ? (
+            // אם יש וריאנטים - הצג כפתור "צפה במוצר"
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled={!product.stock?.available}
+            >
+              {product.stock?.available ? (
+                'בחר אפשרויות'
+              ) : (
+                'אזל מהמלאי'
+              )}
+            </Button>
+          ) : (
+            // אם אין וריאנטים - הצג כפתור "הוסף לעגלה"
+            <Button
+              className="w-full"
+              onClick={handleAddToCart}
+              disabled={adding || !product.stock?.available}
+            >
+              {adding ? (
+                'מוסיף...'
+              ) : product.stock?.available ? (
+                <>
+                  <ShoppingCart className="h-4 w-4 ml-2" />
+                  הוסף לעגלה
+                </>
+              ) : (
+                'אזל מהמלאי'
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </Link>

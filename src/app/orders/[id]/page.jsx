@@ -195,6 +195,23 @@ export default function OrderDetailsPage() {
                       >
                         {item.name}
                       </Link>
+
+                      {/* Variant Details */}
+                      {item.variantDetails && (
+                        <div className="flex gap-2 mt-1">
+                          {item.variantDetails.color && (
+                            <Badge variant="outline" className="text-xs">
+                              צבע: {item.variantDetails.color}
+                            </Badge>
+                          )}
+                          {item.variantDetails.size && (
+                            <Badge variant="outline" className="text-xs">
+                              מידה: {item.variantDetails.size}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+
                       <p className="text-sm text-gray-500 mt-1">
                         כמות: {item.quantity} × ₪{item.price.toFixed(2)}
                       </p>
@@ -284,11 +301,11 @@ export default function OrderDetailsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">סכום ביניים:</span>
+                <span className="text-gray-600">סכום ביניים (כולל מע״מ):</span>
                 <span>₪{order.pricing.subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">מע״מ:</span>
+              <div className="flex justify-between text-xs text-gray-500 pr-4">
+                <span>מתוכו מע״מ (18%):</span>
                 <span>₪{order.pricing.tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">

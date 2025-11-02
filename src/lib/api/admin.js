@@ -121,6 +121,10 @@ export const adminApi = {
     return await apiClient.delete(`/admin/orders/${id}`);
   },
 
+  refreshOrderItems: async (id) => {
+    return await apiClient.patch(`/admin/orders/${id}/refresh-items`);
+  },
+
   // ============================================
   // USERS MANAGEMENT
   // ============================================

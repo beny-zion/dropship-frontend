@@ -1,13 +1,16 @@
 import ProductCard from './ProductCard';
 import EmptyState from '../shared/EmptyState';
 
-export default function ProductList({ products }) {
+export default function ProductList({ products, onReset }) {
   if (!products || products.length === 0) {
     return (
       <EmptyState
         title="אין מוצרים להצגה"
         description="נסה לשנות את הפילטרים או לחפש מוצר אחר"
-        action={{ href: '/products', label: 'צפה בכל המוצרים' }}
+        action={{
+          onClick: onReset,
+          label: 'צפה בכל המוצרים'
+        }}
       />
     );
   }

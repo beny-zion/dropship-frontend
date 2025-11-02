@@ -19,7 +19,9 @@ import {
   CreditCard,
   Truck,
   Save,
-  XCircle
+  XCircle,
+  ExternalLink,
+  ShoppingBag
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -110,6 +112,18 @@ export default function OrderDetailPage() {
     }
   });
 
+  // Refresh order items mutation
+  const refreshItemsMutation = useMutation({
+    mutationFn: () => adminApi.refreshOrderItems(params.id),
+    onSuccess: () => {
+      toast.success('פרטי המוצרים עודכנו מהמסד הנתונים');
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'שגיאה בעדכון פרטי המוצרים');
+    }
+  });
+
   const handleUpdateStatus = () => {
     if (newStatus) {
       updateStatusMutation.mutate(newStatus);
@@ -186,32 +200,83 @@ export default function OrderDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Order Items */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              פריטים בהזמנה
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                פריטים בהזמנה
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshItemsMutation.mutate()}
+                disabled={refreshItemsMutation.isPending}
+              >
+                {refreshItemsMutation.isPending ? 'מעדכן...' : 'עדכן מידע מהמוצרים'}
+              </Button>
+            </div>
 
             <div className="space-y-4">
               {order.items?.map((item, index) => (
-                <div key={index} className="flex items-center gap-4 pb-4 border-b border-gray-100 last:border-0">
-                  {item.product?.images?.[0] && (
-                    <img
-                      src={item.product.images[0]}
-                      alt={item.product.name_he}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">
-                      {item.product?.name_he || 'מוצר לא זמין'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      כמות: {item.quantity} × ₪{item.price?.toLocaleString()}
-                    </p>
+                <div key={index} className="flex flex-col gap-3 pb-4 border-b border-gray-100 last:border-0">
+                  <div className="flex items-center gap-4">
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">
+                        {item.name}
+                      </p>
+
+                      {/* Variant Details */}
+                      {item.variantDetails && (
+                        <div className="flex gap-2 mt-1">
+                          {item.variantDetails.color && (
+                            <Badge variant="outline" className="text-xs">
+                              צבע: {item.variantDetails.color}
+                            </Badge>
+                          )}
+                          {item.variantDetails.size && (
+                            <Badge variant="outline" className="text-xs">
+                              מידה: {item.variantDetails.size}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
+                        כמות: {item.quantity} × ₪{item.price?.toLocaleString()}
+                      </p>
+
+                      {/* Supplier Info */}
+                      {item.supplierName && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          ספק: {item.supplierName}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-gray-900">
+                        ₪{(item.quantity * item.price)?.toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <p className="font-semibold text-gray-900">
-                    ₪{(item.quantity * item.price)?.toLocaleString()}
-                  </p>
+
+                  {/* Purchase Button */}
+                  {item.supplierLink && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(item.supplierLink, '_blank')}
+                      className="w-full sm:w-auto"
+                    >
+                      <ShoppingBag className="w-4 h-4 ml-2" />
+                      קנה אצל {item.supplierName || 'הספק'}
+                      <ExternalLink className="w-3 h-3 mr-2" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

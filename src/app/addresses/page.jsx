@@ -61,7 +61,10 @@ export default function AddressesPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorMessage message="שגיאה בטעינת הכתובות" />;
 
-  const addresses = addressesData || [];
+  // Handle both array and object with data property
+  const addresses = Array.isArray(addressesData)
+    ? addressesData
+    : (addressesData?.data || []);
 
   return (
     <div className="container max-w-4xl py-8">

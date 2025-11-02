@@ -4,13 +4,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
   Users,
-  Settings,
-  LogOut
+  LogOut,
+  Folder
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,6 +19,11 @@ const navItems = [
     name: 'לוח בקרה',
     href: '/admin',
     icon: LayoutDashboard
+  },
+  {
+    name: 'קטגוריות',
+    href: '/admin/categories',
+    icon: Folder
   },
   {
     name: 'מוצרים',

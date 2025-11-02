@@ -33,18 +33,24 @@ export default function CartPage() {
     router.push('/checkout');
   };
 
-  const handleUpdateQuantity = async (productId, newQuantity) => {
+  const handleUpdateQuantity = async (productId, newQuantity, variantSku = null) => {
+    // בדיקת מגבלה
+    if (newQuantity > 2) {
+      toast.error('ניתן להזמין עד 2 יחידות בלבד מכל מוצר');
+      return;
+    }
+
     try {
-      await updateQuantity(productId, newQuantity);
+      await updateQuantity(productId, newQuantity, variantSku);
       toast.success('כמות עודכנה');
     } catch (error) {
       console.error('Update quantity error:', error);
     }
   };
 
-  const handleRemoveItem = async (productId, productName) => {
+  const handleRemoveItem = async (productId, productName, variantSku = null) => {
     try {
-      await removeFromCart(productId);
+      await removeFromCart(productId, variantSku);
       // Toast already shown in context
     } catch (error) {
       console.error('Remove item error:', error);
@@ -151,30 +157,53 @@ export default function CartPage() {
         <div className="lg:col-span-2 space-y-4">
           {cart.items.map((item) => {
             const isUnavailable = !item.product.stock.available;
-            
+            // ⭐ יצירת key ייחודי שכולל גם את ה-variantSku
+            const itemKey = item.variantSku
+              ? `${item.product._id}-${item.variantSku}`
+              : item.product._id;
+
             return (
               <div
-                key={item.product._id}
+                key={itemKey}
                 className={`bg-white border rounded-lg p-4 transition-all ${
                   isUnavailable ? 'border-red-300 bg-red-50' : 'hover:shadow-md'
                 }`}
               >
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   {/* Image */}
-                  <div className="relative h-24 w-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
-                    {(item.product.images?.[0]?.url || item.product.images?.main) ? (
-                      <Image
-                        src={item.product.images[0]?.url || item.product.images.main}
-                        alt={item.product.name_he}
-                        fill
-                        className={`object-contain p-2 ${isUnavailable ? 'opacity-50' : ''}`}
-                        sizes="96px"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-xs text-gray-400">
-                        אין תמונה
-                      </div>
-                    )}
+                  <div className="relative h-32 sm:h-24 w-full sm:w-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                    {(() => {
+                      // ⭐ קודם נחפש תמונה של הווריאנט, אחר כך תמונה כללית
+                      let imageUrl = null;
+
+                      // אם יש ווריאנט, חפש את התמונה שלו
+                      if (item.variantSku && item.product.variants) {
+                        const variant = item.product.variants.find(v => v.sku === item.variantSku);
+                        if (variant?.images?.length > 0) {
+                          const primaryImage = variant.images.find(img => img.isPrimary);
+                          imageUrl = primaryImage?.url || variant.images[0]?.url;
+                        }
+                      }
+
+                      // אם לא מצאנו תמונת ווריאנט, קח תמונה כללית
+                      if (!imageUrl) {
+                        imageUrl = item.product.images?.[0]?.url || item.product.images?.main;
+                      }
+
+                      return imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt={item.product.name_he}
+                          fill
+                          className={`object-contain p-2 ${isUnavailable ? 'opacity-50' : ''}`}
+                          sizes="96px"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-xs text-gray-400">
+                          אין תמונה
+                        </div>
+                      );
+                    })()}
                     {isUnavailable && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                         <Badge className="bg-red-500 text-white">לא זמין</Badge>
@@ -192,13 +221,29 @@ export default function CartPage() {
                         {item.product.name_he}
                       </Link>
                       <button
-                        onClick={() => handleRemoveItem(item.product._id, item.product.name_he)}
+                        onClick={() => handleRemoveItem(item.product._id, item.product.name_he, item.variantSku)}
                         className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
                         title="הסר מהעגלה"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
                     </div>
+
+                    {/* Variant Details */}
+                    {item.variant && (
+                      <div className="flex gap-2 mt-2">
+                        {item.variant.color && (
+                          <Badge variant="outline" className="text-xs">
+                            צבע: {item.variant.color}
+                          </Badge>
+                        )}
+                        {item.variant.size && (
+                          <Badge variant="outline" className="text-xs">
+                            מידה: {item.variant.size}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
 
                     {/* Stock Status */}
                     {isUnavailable && (
@@ -210,11 +255,11 @@ export default function CartPage() {
                     )}
 
                     {/* Quantity & Price */}
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                       {/* Quantity Controls */}
                       <div className="flex items-center border rounded overflow-hidden">
                         <button
-                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1, item.variantSku)}
                           disabled={item.quantity <= 1 || isUnavailable}
                           className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           aria-label="הפחת כמות"
@@ -225,10 +270,11 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
-                          disabled={item.quantity >= 10 || isUnavailable}
+                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1, item.variantSku)}
+                          disabled={item.quantity >= 2 || isUnavailable}
                           className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           aria-label="הוסף כמות"
+                          title={item.quantity >= 2 ? "ניתן להזמין עד 2 יחידות בלבד" : "הוסף כמות"}
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -245,10 +291,18 @@ export default function CartPage() {
                       </div>
                     </div>
 
+                    {/* Max Quantity Warning */}
+                    {item.quantity >= 2 && (
+                      <p className="text-xs text-blue-600 mt-2 font-medium">
+                        הגעת למקסימום - 2 יחידות למוצר
+                      </p>
+                    )}
+
                     {/* Low Stock Warning */}
-                    {item.product.stock.quantity && 
-                     item.product.stock.quantity < 5 && 
-                     item.product.stock.available && (
+                    {item.product.stock.quantity &&
+                     item.product.stock.quantity < 5 &&
+                     item.product.stock.available &&
+                     item.quantity < 2 && (
                       <p className="text-xs text-orange-600 mt-2">
                         נותרו רק {item.product.stock.quantity} יחידות במלאי!
                       </p>
@@ -268,12 +322,12 @@ export default function CartPage() {
             {/* Pricing Breakdown */}
             <div className="space-y-3 mb-6 pb-6 border-b">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">סכום ביניים:</span>
+                <span className="text-gray-600">סכום ביניים (כולל מע״מ):</span>
                 <span className="font-semibold">₪{cart.pricing.subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">מע״מ (17%):</span>
-                <span className="font-semibold">₪{cart.pricing.tax.toFixed(2)}</span>
+              <div className="flex justify-between text-xs text-gray-500 pr-4">
+                <span>מתוכו מע״מ (18%):</span>
+                <span>₪{cart.pricing.tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">משלוח:</span>

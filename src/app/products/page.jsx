@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useProducts } from '@/lib/hooks/useProducts';
 import ProductList from '@/components/products/ProductList';
 import ProductFilters from '@/components/products/ProductFilters';
@@ -9,37 +10,75 @@ import Loading from '@/components/shared/Loading';
 import ErrorMessage from '@/components/shared/ErrorMessage';
 import { Button } from '@/components/ui/button';
 
-export default function ProductsPage() {
+function ProductsPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // קריאת הפרמטרים מה-URL בעת הטעינה הראשונית
   const [filters, setFilters] = useState({
-    page: 1,
+    page: parseInt(searchParams.get('page')) || 1,
     limit: 12,
-    category: 'all',
-    sort: '-createdAt',
-    search: '',
-    minPrice: '',
-    maxPrice: '',
+    category: searchParams.get('category') || 'all',
+    sort: searchParams.get('sort') || '-createdAt',
+    search: searchParams.get('search') || '',
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
   });
 
   const { data, isLoading, error, refetch } = useProducts(filters);
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       [key]: value,
       page: 1 // Reset to first page
-    }));
+    };
+    setFilters(newFilters);
+
+    // עדכון ה-URL
+    updateURL(newFilters);
+  };
+
+  const updateURL = (newFilters) => {
+    const params = new URLSearchParams();
+
+    // הוסף רק פרמטרים שאינם ברירת מחדל
+    if (newFilters.category && newFilters.category !== 'all') {
+      params.set('category', newFilters.category);
+    }
+    if (newFilters.search) {
+      params.set('search', newFilters.search);
+    }
+    if (newFilters.sort && newFilters.sort !== '-createdAt') {
+      params.set('sort', newFilters.sort);
+    }
+    if (newFilters.minPrice) {
+      params.set('minPrice', newFilters.minPrice);
+    }
+    if (newFilters.maxPrice) {
+      params.set('maxPrice', newFilters.maxPrice);
+    }
+    if (newFilters.page > 1) {
+      params.set('page', newFilters.page.toString());
+    }
+
+    const queryString = params.toString();
+    const newURL = queryString ? `/products?${queryString}` : '/products';
+    router.push(newURL, { scroll: false });
   };
 
   const handleSearch = (query) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       search: query,
       page: 1
-    }));
+    };
+    setFilters(newFilters);
+    updateURL(newFilters);
   };
 
   const handleReset = () => {
-    setFilters({
+    const resetFilters = {
       page: 1,
       limit: 12,
       category: 'all',
@@ -47,11 +86,15 @@ export default function ProductsPage() {
       search: '',
       minPrice: '',
       maxPrice: '',
-    });
+    };
+    setFilters(resetFilters);
+    router.push('/products', { scroll: false });
   };
 
   const handlePageChange = (newPage) => {
-    setFilters(prev => ({ ...prev, page: newPage }));
+    const newFilters = { ...filters, page: newPage };
+    setFilters(newFilters);
+    updateURL(newFilters);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -96,7 +139,7 @@ export default function ProductsPage() {
           {isLoading ? (
             <Loading />
           ) : (
-            <ProductList products={data?.data || []} />
+            <ProductList products={data?.data || []} onReset={handleReset} />
           )}
 
           {/* Pagination */}
@@ -132,5 +175,14 @@ export default function ProductsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// קומפוננט Wrapper עם Suspense
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }
