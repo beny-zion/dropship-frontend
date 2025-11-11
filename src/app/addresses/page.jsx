@@ -67,51 +67,64 @@ export default function AddressesPage() {
     : (addressesData?.data || []);
 
   return (
-    <div className="container max-w-4xl py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">הכתובות שלי</h1>
-          <p className="text-muted-foreground mt-2">
-            נהל את כתובות המשלוח שלך
-          </p>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-neutral-200">
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-4xl font-light tracking-widest uppercase text-center">הכתובות שלי</h1>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          כתובת חדשה
-        </Button>
       </div>
 
-      {addresses.length === 0 ? (
-        <EmptyState
-          icon="📍"
-          title="אין כתובות שמורות"
-          description="הוסף כתובת משלוח כדי להאיץ את תהליך ההזמנה בפעם הבאה"
-          action={{
-            label: 'הוסף כתובת ראשונה',
-            onClick: () => setIsFormOpen(true),
-          }}
-        />
-      ) : (
-        <div className="grid gap-4">
-          {addresses.map((address) => (
-            <AddressCard
-              key={address._id}
-              address={address}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onSetDefault={handleSetDefault}
-            />
-          ))}
+      <div className="container max-w-4xl px-4 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <p className="text-sm font-light text-neutral-600 tracking-wide">
+            נהל את כתובות המשלוח שלך
+          </p>
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="px-6 py-3 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all inline-flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            כתובת חדשה
+          </button>
         </div>
-      )}
 
-      <AddressForm
-        isOpen={isFormOpen}
-        onClose={handleCloseForm}
-        onSubmit={editingAddress ? handleUpdate : handleCreate}
-        initialData={editingAddress}
-        isLoading={createMutation.isPending || updateMutation.isPending}
-      />
+        {addresses.length === 0 ? (
+          <div className="border border-dashed border-neutral-300 p-12 text-center">
+            <div className="text-6xl mb-4">📍</div>
+            <h2 className="text-2xl font-light tracking-wide mb-2">אין כתובות שמורות</h2>
+            <p className="text-sm font-light text-neutral-600 mb-6 tracking-wide">
+              הוסף כתובת משלוח כדי להאיץ את תהליך ההזמנה בפעם הבאה
+            </p>
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="px-8 py-3 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all"
+            >
+              הוסף כתובת ראשונה
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {addresses.map((address) => (
+              <AddressCard
+                key={address._id}
+                address={address}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSetDefault={handleSetDefault}
+              />
+            ))}
+          </div>
+        )}
+
+        <AddressForm
+          isOpen={isFormOpen}
+          onClose={handleCloseForm}
+          onSubmit={editingAddress ? handleUpdate : handleCreate}
+          initialData={editingAddress}
+          isLoading={createMutation.isPending || updateMutation.isPending}
+        />
+      </div>
     </div>
   );
 }

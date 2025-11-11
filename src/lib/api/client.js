@@ -5,35 +5,26 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 // יצירת Axios instance
 const apiClient = axios.create({
   baseURL: API_URL,
+  withCredentials: true, // 🍪 CRITICAL: Send cookies with every request
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-// Request interceptor - הוספת token אוטומטית
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 // Response interceptor - טיפול בשגיאות
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
-      // Token פג תוקף - מחיקה והפניה לlogin
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      // Token פג תוקף או לא קיים
+      // 🚫 Don't redirect if already on login/register pages to avoid infinite loop
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        const currentPath = window.location.pathname;
+        const isAuthPage = currentPath === '/login' || currentPath === '/register';
+
+        if (!isAuthPage) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error.response?.data || error.message);

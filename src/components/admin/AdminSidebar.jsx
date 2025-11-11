@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   Users,
   LogOut,
-  Folder
+  Folder,
+  Home
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,6 +20,11 @@ const navItems = [
     name: 'לוח בקרה',
     href: '/admin',
     icon: LayoutDashboard
+  },
+  {
+    name: 'דף הבית',
+    href: '/admin/homepage',
+    icon: Home
   },
   {
     name: 'קטגוריות',

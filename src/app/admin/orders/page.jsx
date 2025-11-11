@@ -12,21 +12,17 @@ import { Search, Eye, Package } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
-
-const statusConfig = {
-  pending: { label: 'ממתינה', className: 'bg-yellow-100 text-yellow-800' },
-  confirmed: { label: 'אושרה', className: 'bg-blue-100 text-blue-800' },
-  processing: { label: 'בטיפול', className: 'bg-purple-100 text-purple-800' },
-  shipped: { label: 'נשלחה', className: 'bg-orange-100 text-orange-800' },
-  delivered: { label: 'נמסרה', className: 'bg-green-100 text-green-800' },
-  cancelled: { label: 'בוטלה', className: 'bg-red-100 text-red-800' }
-};
+import { useStatusConfig, useOrderStatuses } from '@/lib/hooks/useOrderStatuses';
 
 export default function OrdersManagementPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const limit = 20;
+
+  // Load statuses from server
+  const { statusConfig, isLoading: statusLoading } = useStatusConfig();
+  const { data: statusesData } = useOrderStatuses();
 
   // Fetch orders
   const { data, isLoading } = useQuery({
@@ -70,29 +66,75 @@ export default function OrdersManagementPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">הזמנות ממתינות</p>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('pending')}>
+          <p className="text-sm text-gray-600">ממתינות</p>
           <p className="text-2xl font-bold text-yellow-600 mt-1">
             {stats.pending || 0}
           </p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">בטיפול</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
-            {stats.processing || 0}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">נשלחו</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('payment_hold')}>
+          <p className="text-sm text-gray-600">מסגרת תפוסה</p>
           <p className="text-2xl font-bold text-orange-600 mt-1">
-            {stats.shipped || 0}
+            {stats.payment_hold || 0}
           </p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('ordered')}>
+          <p className="text-sm text-gray-600">הוזמנו מארה"ב</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">
+            {stats.ordered || 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('arrived_us_warehouse')}>
+          <p className="text-sm text-gray-600">במחסן ארה"ב</p>
+          <p className="text-2xl font-bold text-indigo-600 mt-1">
+            {stats.arrived_us_warehouse || 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('shipped_to_israel')}>
+          <p className="text-sm text-gray-600">בדרך לישראל</p>
+          <p className="text-2xl font-bold text-purple-600 mt-1">
+            {stats.shipped_to_israel || 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('customs_israel')}>
+          <p className="text-sm text-gray-600">במכס</p>
+          <p className="text-2xl font-bold text-pink-600 mt-1">
+            {stats.customs_israel || 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('arrived_israel_warehouse')}>
+          <p className="text-sm text-gray-600">במחסן ישראל</p>
+          <p className="text-2xl font-bold text-cyan-600 mt-1">
+            {stats.arrived_israel_warehouse || 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('shipped_to_customer')}>
+          <p className="text-sm text-gray-600">נשלחו ללקוחות</p>
+          <p className="text-2xl font-bold text-teal-600 mt-1">
+            {stats.shipped_to_customer || 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('delivered')}>
           <p className="text-sm text-gray-600">הושלמו</p>
           <p className="text-2xl font-bold text-green-600 mt-1">
-            {stats.breakdown?.delivered || 0}
+            {stats.delivered || 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             onClick={() => setStatusFilter('cancelled')}>
+          <p className="text-sm text-gray-600">בוטלו</p>
+          <p className="text-2xl font-bold text-red-600 mt-1">
+            {stats.breakdown?.cancelled || 0}
           </p>
         </div>
       </div>
@@ -124,12 +166,16 @@ export default function OrdersManagementPage() {
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">כל הסטטוסים</option>
-            <option value="pending">ממתינה</option>
-            <option value="confirmed">אושרה</option>
-            <option value="processing">בטיפול</option>
-            <option value="shipped">נשלחה</option>
-            <option value="delivered">נמסרה</option>
-            <option value="cancelled">בוטלה</option>
+            <option value="pending">ממתין לאישור</option>
+            <option value="payment_hold">מסגרת אשראי תפוסה</option>
+            <option value="ordered">הוזמן מארה"ב</option>
+            <option value="arrived_us_warehouse">הגיע למחסן ארה"ב</option>
+            <option value="shipped_to_israel">נשלח לישראל</option>
+            <option value="customs_israel">במכס בישראל</option>
+            <option value="arrived_israel_warehouse">הגיע למחסן בישראל</option>
+            <option value="shipped_to_customer">נשלח ללקוח</option>
+            <option value="delivered">נמסר</option>
+            <option value="cancelled">בוטל</option>
           </select>
 
           {/* Clear Filters */}

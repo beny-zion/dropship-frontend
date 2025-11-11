@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { getOrderById } from '@/lib/api/orders';
+import { useStatusConfig } from '@/lib/hooks/useOrderStatuses';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useReactToPrint } from 'react-to-print';
@@ -28,6 +29,9 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const printRef = useRef(null);
+
+  // Load dynamic statuses from server
+  const { statusConfig, isLoading: statusLoading } = useStatusConfig();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -76,198 +80,202 @@ export default function OrderDetailsPage() {
     `,
   });
 
-  if (loading) {
+  if (loading || statusLoading) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">טוען הזמנה...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-black border-t-transparent mx-auto mb-4"></div>
+          <p className="text-sm font-light text-neutral-600 tracking-wide">טוען הזמנה...</p>
+        </div>
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <p className="text-xl text-gray-600">הזמנה לא נמצאה</p>
-        <Link href="/orders">
-          <Button className="mt-4">חזרה להזמנות</Button>
-        </Link>
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="text-center">
+          <p className="text-xl font-light text-neutral-600 mb-6 tracking-wide">הזמנה לא נמצאה</p>
+          <Link href="/orders">
+            <button className="px-8 py-3 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all">
+              חזרה להזמנות
+            </button>
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const statusConfig = {
-    pending: { label: 'ממתינה', color: 'bg-yellow-500', icon: Package },
-    confirmed: { label: 'אושרה', color: 'bg-blue-500', icon: CheckCircle },
-    processing: { label: 'בטיפול', color: 'bg-purple-500', icon: Package },
-    shipped: { label: 'נשלחה', color: 'bg-orange-500', icon: Truck },
-    delivered: { label: 'נמסרה', color: 'bg-green-500', icon: Home },
-    cancelled: { label: 'בוטלה', color: 'bg-red-500', icon: Package },
+  // Default icon mapping for statuses
+  const statusIcons = {
+    pending: Package,
+    payment_hold: Package,
+    ordered: CheckCircle,
+    cancelled: Package,
+    arrived_us_warehouse: Package,
+    shipped_to_israel: Truck,
+    customs_israel: Package,
+    arrived_israel_warehouse: Package,
+    shipped_to_customer: Truck,
+    delivered: Home,
   };
 
-  const currentStatus = statusConfig[order.status];
-  const StatusIcon = currentStatus.icon;
+  const currentStatus = statusConfig[order.status] || { label: order.status, className: 'bg-neutral-100 text-neutral-700' };
+  const StatusIcon = statusIcons[order.status] || Package;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Success Header */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8 text-center no-print">
-        <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h1 className="text-3xl font-bold text-green-800 mb-2">
-          ההזמנה התקבלה בהצלחה!
-        </h1>
-        <p className="text-green-700 mb-4">
-          תודה על ההזמנה. נשלח לך אישור למייל בקרוב.
-        </p>
-        <Button
-          onClick={handlePrint}
-          variant="outline"
-          className="bg-white"
-        >
-          <Printer className="h-4 w-4 ml-2" />
-          הדפס / שמור כ-PDF
-        </Button>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-neutral-200">
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-4xl font-light tracking-widest uppercase text-center">פרטי הזמנה</h1>
+        </div>
       </div>
+
+      <div className="container mx-auto px-4 py-12">
+        {/* Success Header */}
+        <div className="border border-neutral-200 bg-neutral-50 p-8 mb-8 text-center no-print">
+          <CheckCircle className="h-16 w-16 text-black mx-auto mb-4" />
+          <h2 className="text-2xl font-light tracking-wide mb-2">
+            ההזמנה התקבלה בהצלחה!
+          </h2>
+          <p className="text-sm font-light text-neutral-600 mb-6 tracking-wide">
+            תודה על ההזמנה. נשלח לך אישור למייל בקרוב.
+          </p>
+          <button
+            onClick={handlePrint}
+            className="px-6 py-3 border border-neutral-300 text-sm font-light tracking-wide hover:border-black transition-colors inline-flex items-center gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            הדפס / שמור כ-PDF
+          </button>
+        </div>
 
       <div ref={printRef} className="grid lg:grid-cols-3 gap-8">
         {/* Order Details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Order Info */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>הזמנה #{order.orderNumber}</CardTitle>
-                <Badge className={currentStatus.color}>
-                  <StatusIcon className="h-4 w-4 ml-1" />
-                  {currentStatus.label}
-                </Badge>
+          <div className="border border-neutral-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-normal tracking-wide">הזמנה #{order.orderNumber}</h2>
+              <span className={`px-3 py-1 text-xs font-light tracking-wider inline-flex items-center gap-2 ${currentStatus.className}`}>
+                <StatusIcon className="h-4 w-4" />
+                {currentStatus.label}
+              </span>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6 text-sm font-light">
+              <div>
+                <span className="text-neutral-600">תאריך הזמנה:</span>
+                <p className="font-normal mt-1">
+                  {new Date(order.createdAt).toLocaleDateString('he-IL')}
+                </p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">תאריך הזמנה:</span>
-                  <p className="font-medium">
-                    {new Date(order.createdAt).toLocaleDateString('he-IL')}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-600">זמן אספקה משוער:</span>
-                  <p className="font-medium">
-                    {order.shipping.estimatedDelivery
-                      ? new Date(order.shipping.estimatedDelivery).toLocaleDateString('he-IL')
-                      : '7-10 ימי עסקים'}
-                  </p>
-                </div>
+              <div>
+                <span className="text-neutral-600">זמן אספקה משוער:</span>
+                <p className="font-normal mt-1">
+                  {order.shipping.estimatedDelivery
+                    ? new Date(order.shipping.estimatedDelivery).toLocaleDateString('he-IL')
+                    : '7-10 ימי עסקים'}
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Order Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>פריטים בהזמנה</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {order.items.map((item) => (
-                  <div key={item.product._id} className="flex gap-4">
-                    <div className="relative h-20 w-20 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center">
-                      {item.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="object-contain p-2 w-full h-full"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = '<div class="text-xs text-gray-400">אין תמונה</div>';
-                          }}
-                        />
-                      ) : (
-                        <div className="text-xs text-gray-400">אין תמונה</div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <Link
-                        href={`/products/${item.product.slug || item.product._id}`}
-                        className="font-medium hover:text-blue-600 print:no-underline print:text-black"
-                      >
-                        {item.name}
-                      </Link>
-
-                      {/* Variant Details */}
-                      {item.variantDetails && (
-                        <div className="flex gap-2 mt-1">
-                          {item.variantDetails.color && (
-                            <Badge variant="outline" className="text-xs">
-                              צבע: {item.variantDetails.color}
-                            </Badge>
-                          )}
-                          {item.variantDetails.size && (
-                            <Badge variant="outline" className="text-xs">
-                              מידה: {item.variantDetails.size}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-
-                      <p className="text-sm text-gray-500 mt-1">
-                        כמות: {item.quantity} × ₪{item.price.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold">
-                        ₪{(item.price * item.quantity).toFixed(2)}
-                      </p>
-                    </div>
+          <div className="border border-neutral-200 p-6">
+            <h2 className="text-lg font-normal tracking-wide mb-6">פריטים בהזמנה</h2>
+            <div className="space-y-6">
+              {order.items.map((item) => (
+                <div key={item.product._id} className="flex gap-4 pb-6 border-b border-neutral-200 last:border-0 last:pb-0">
+                  <div className="relative h-20 w-20 bg-neutral-50 border border-neutral-200 flex-shrink-0 flex items-center justify-center">
+                    {item.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="object-contain p-2 w-full h-full"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = '<div class="text-xs text-neutral-400">אין תמונה</div>';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-xs text-neutral-400">אין תמונה</div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex-1">
+                    <Link
+                      href={`/products/${item.product.slug || item.product._id}`}
+                      className="font-light hover:opacity-70 transition-opacity print:no-underline print:text-black"
+                    >
+                      {item.name}
+                    </Link>
+
+                    {/* Variant Details */}
+                    {item.variantDetails && (
+                      <div className="flex gap-2 mt-2">
+                        {item.variantDetails.color && (
+                          <span className="text-xs font-light text-neutral-600">
+                            צבע: {item.variantDetails.color}
+                          </span>
+                        )}
+                        {item.variantDetails.size && (
+                          <span className="text-xs font-light text-neutral-600">
+                            מידה: {item.variantDetails.size}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-sm font-light text-neutral-600 mt-2">
+                      כמות: {item.quantity} × ₪{item.price.toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-normal text-lg">
+                      ₪{(item.price * item.quantity).toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>מעקב הזמנה</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {order.timeline.map((event, index) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                      {index < order.timeline.length - 1 && (
-                        <div className="w-px h-full bg-gray-300 my-1"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <p className="font-medium">{event.message}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(event.timestamp).toLocaleString('he-IL')}
-                      </p>
-                    </div>
+          <div className="border border-neutral-200 p-6">
+            <h2 className="text-lg font-normal tracking-wide mb-6">מעקב הזמנה</h2>
+            <div className="space-y-4">
+              {order.timeline.map((event, index) => (
+                <div key={index} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="w-3 h-3 bg-black"></div>
+                    {index < order.timeline.length - 1 && (
+                      <div className="w-px h-full bg-neutral-300 my-1"></div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex-1 pb-4">
+                    <p className="font-normal text-sm">{event.message}</p>
+                    <p className="text-xs font-light text-neutral-600 mt-1">
+                      {new Date(event.timestamp).toLocaleString('he-IL')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           {/* Shipping Address */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <MapPin className="h-5 w-5 ml-2" />
-                כתובת משלוח
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm space-y-2">
-              <p className="font-medium">{order.shippingAddress.fullName}</p>
-              <p>
+          <div className="border border-neutral-200 p-6">
+            <h2 className="text-lg font-normal tracking-wide mb-4 flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              כתובת משלוח
+            </h2>
+            <div className="text-sm font-light space-y-2">
+              <p className="font-normal">{order.shippingAddress.fullName}</p>
+              <p className="text-neutral-600">
                 {order.shippingAddress.street}
                 {(order.shippingAddress.apartment || order.shippingAddress.floor || order.shippingAddress.entrance) && (
                   <span className="text-xs mr-2">
@@ -279,68 +287,65 @@ export default function OrderDetailsPage() {
                   </span>
                 )}
               </p>
-              <p>
+              <p className="text-neutral-600">
                 {order.shippingAddress.city}, {order.shippingAddress.zipCode}
               </p>
-              <Separator className="my-3" />
-              <p className="flex items-center">
-                <Phone className="h-4 w-4 ml-2" />
+              <div className="border-t border-neutral-200 my-4" />
+              <p className="flex items-center gap-2 text-neutral-600">
+                <Phone className="h-4 w-4" />
                 {order.shippingAddress.phone}
               </p>
-              <p className="flex items-center">
-                <Mail className="h-4 w-4 ml-2" />
+              <p className="flex items-center gap-2 text-neutral-600">
+                <Mail className="h-4 w-4" />
                 {order.shippingAddress.email}
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Order Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>סיכום הזמנה</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">סכום ביניים (כולל מע״מ):</span>
-                <span>₪{order.pricing.subtotal.toFixed(2)}</span>
+          <div className="border border-neutral-200 p-6">
+            <h2 className="text-lg font-normal tracking-wide mb-6">סיכום הזמנה</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm font-light">
+                <span className="text-neutral-600">סכום ביניים:</span>
+                <span className="font-normal">₪{order.pricing.subtotal.toFixed(0)}</span>
               </div>
-              <div className="flex justify-between text-xs text-gray-500 pr-4">
-                <span>מתוכו מע״מ (18%):</span>
-                <span>₪{order.pricing.tax.toFixed(2)}</span>
+              <div className="flex justify-between text-xs font-light text-neutral-500 pr-4">
+                <span>כולל מע״מ (18%):</span>
+                <span>₪{order.pricing.tax.toFixed(0)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">משלוח:</span>
+              <div className="flex justify-between text-sm font-light">
+                <span className="text-neutral-600">משלוח:</span>
                 {order.pricing.shipping === 0 ? (
-                  <span className="text-green-600 font-semibold">חינם!</span>
+                  <span className="font-normal">חינם</span>
                 ) : (
-                  <span>₪{order.pricing.shipping.toFixed(2)}</span>
+                  <span className="font-normal">₪{order.pricing.shipping.toFixed(0)}</span>
                 )}
               </div>
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
+              <div className="border-t border-neutral-200 pt-3 mt-3" />
+              <div className="flex justify-between text-xl font-normal">
                 <span>סה״כ:</span>
-                <span className="text-blue-600">
-                  ₪{order.pricing.total.toFixed(2)}
-                </span>
+                <span>₪{order.pricing.total.toFixed(0)}</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Actions */}
           <div className="space-y-3 no-print">
             <Link href="/orders">
-              <Button variant="outline" className="w-full">
+              <button className="w-full px-4 py-3 border border-neutral-300 text-sm font-light tracking-wide hover:border-black transition-colors">
                 ההזמנות שלי
-              </Button>
+              </button>
             </Link>
             <Link href="/products">
-              <Button className="w-full">
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <button className="w-full px-4 py-3 bg-black text-white text-sm font-light tracking-wide hover:bg-neutral-800 transition-colors inline-flex items-center justify-center gap-2">
+                <ArrowRight className="h-4 w-4" />
                 המשך בקניות
-              </Button>
+              </button>
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

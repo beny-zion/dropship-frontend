@@ -3,35 +3,195 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 0 0% 0%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 0%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 0 0% 0%;
+    --radius: 0;
+
+    /* GUESS-inspired design variables */
+    --guess-accent-color: #000;
+    --guess-underline-opacity: #404040;
+    --guess-border-radius: 48px;
+    --guess-spacing-1: 1.31%;
+    --guess-spacing-2: 2%;
+    --guess-spacing-3: 3%;
+    --guess-spacing-4: 4%;
   }
 }
 
 * {
-  border-color: hsl(214.3 31.8% 91.4%);
+  border-color: hsl(0 0% 88%);
 }
 
 body {
   background-color: white;
-  color: rgb(17 24 39);
+  color: rgb(0 0 0);
   direction: rtl;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Assistant', system-ui, -apple-system, sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection Colors */
+::selection {
+  background-color: black;
+  color: white;
+}
+
+::-moz-selection {
+  background-color: black;
+  color: white;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(245 245 245);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(163 163 163);
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(0 0 0);
+}
+
+/* Focus Visible for Accessibility */
+*:focus-visible {
+  outline: 2px solid black;
+  outline-offset: 2px;
+}
+
+/* Improved Image Loading */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* HomePage CMS Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+
+/* Button Press Effect */
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Link Hover Effect */
+a {
+  transition: opacity 0.2s ease;
+}
+
+a:hover {
+  opacity: 0.7;
+}
+
+/* GUESS-inspired Typography Styles */
+.guess-heading-main {
+  font-size: clamp(24px, 3.54vw, 68px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  text-shadow: 1px 1px 80px rgba(41, 33, 33, 0.3);
+}
+
+.guess-heading-secondary {
+  font-size: clamp(18px, 2.34vw, 45px);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+.guess-heading-subtitle {
+  font-size: clamp(12px, 1.25vw, 24px);
+  line-height: 1.33;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.guess-cta {
+  font-size: clamp(12px, 1.15vw, 22px);
+  letter-spacing: 0;
+  line-height: 1.3125;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.guess-cta:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: none;
+  text-decoration-color: var(--guess-underline-opacity);
+}
+
+.guess-text-overlay {
+  text-shadow: 1px 1px 30px rgba(41, 33, 33, 0.8);
+}
+
+.guess-rounded-container {
+  border: 1px solid var(--guess-underline-opacity);
+  border-radius: var(--guess-border-radius);
+  padding-top: var(--guess-spacing-3);
+  padding-bottom: 5%;
+  margin-top: var(--guess-spacing-2);
+}
+
+/* Product Card Text Styling - GUESS inspired */
+.guess-product-title {
+  font-size: clamp(10px, 1vw, 16px);
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  text-transform: uppercase;
 }

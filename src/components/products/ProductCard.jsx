@@ -2,20 +2,20 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCart } from '@/contexts/CartContext'; // ⭐ חדש
-import { toast } from 'sonner'; // ⭐ חדש
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Star, ShoppingCart } from 'lucide-react'; // ⭐ חדש
-import { useState } from 'react'; // ⭐ חדש
+import { useRouter } from 'next/navigation';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
+import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
 
 export default function ProductCard({ product }) {
-  const { addToCart } = useCart(); // ⭐ חדש
-  const [adding, setAdding] = useState(false); // ⭐ חדש
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const [adding, setAdding] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const hasDiscount = product.discount > 0;
-  const freeShipping = product.shipping?.freeShipping || product.shipping?.cost === 0;
-  const hasVariants = product.variants && product.variants.length > 0; // ⭐ חדש
+  const hasVariants = product.variants && product.variants.length > 0;
 
   // Helper to get primary image URL
   const getPrimaryImageUrl = () => {
@@ -33,13 +33,12 @@ export default function ProductCard({ product }) {
 
   const imageUrl = getPrimaryImageUrl();
 
-  // ⭐ חדש - הוספה לעגלה רק למוצרים ללא וריאנטים
+  // הוספה לעגלה רק למוצרים ללא וריאנטים
   const handleAddToCart = async (e) => {
     e.preventDefault(); // Prevent navigation
 
-    // אם יש וריאנטים, אל תאפשר הוספה לעגלה - הגדרה לא נחוצה כי הכפתור משתנה
     if (hasVariants) {
-      return; // This shouldn't happen as button changes, but safety check
+      return;
     }
 
     setAdding(true);
@@ -54,107 +53,106 @@ export default function ProductCard({ product }) {
     }
   };
 
+  const handleTagClick = (e, tag) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/products?tags=${encodeURIComponent(tag)}`);
+  };
+
   return (
     <Link href={`/products/${product.slug || product._id}`}>
-      <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white">
-        {/* Image */}
-        <div className="relative h-48 bg-gray-100">
+      <div
+        className="group relative bg-white overflow-hidden transition-all duration-500 hover:shadow-2xl"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Image Container - Large & Elegant */}
+        <div className="relative aspect-[3/4] bg-neutral-50 overflow-hidden">
           {imageUrl ? (
             <Image
               src={imageUrl}
               alt={product.name_he || 'מוצר'}
               fill
-              className="object-contain p-4"
-              sizes="(max-width: 768px) 100vw, 25vw"
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 33vw"
               unoptimized={imageUrl.startsWith('data:')}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              אין תמונה
+            <div className="flex items-center justify-center h-full text-neutral-300">
+              <span className="text-sm font-light tracking-widest">NO IMAGE</span>
             </div>
           )}
 
-          {/* Badges */}
-          <div className="absolute top-2 right-2 flex flex-col gap-2">
-            {hasDiscount && (
-              <Badge className="bg-red-500">
-                -{product.discount}%
-              </Badge>
-            )}
-            {freeShipping && (
-              <Badge className="bg-green-500">
-                משלוח חינם
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          {/* Name */}
-          <h3 className="font-semibold text-lg mb-2 line-clamp-2 h-14">
-            {product.name_he}
-          </h3>
-
-          {/* Rating */}
-          {product.rating && (
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium mr-1">
-                  {product.rating.average?.toFixed(1) || '0.0'}
-                </span>
-              </div>
-              <span className="text-sm text-gray-500">
-                ({product.rating.count || 0} ביקורות)
-              </span>
+          {/* Discount Badge - Minimal */}
+          {hasDiscount && (
+            <div className="absolute top-4 right-4 bg-black text-white px-3 py-1 text-xs font-light tracking-wider">
+              -{product.discount}%
             </div>
           )}
 
-          {/* Price */}
-          <div className="mb-3">
-            {hasDiscount && product.originalPrice?.ils && (
-              <span className="text-sm text-gray-400 line-through ml-2">
-                ₪{product.originalPrice.ils.toFixed(2)}
-              </span>
-            )}
-            <span className="text-2xl font-bold text-blue-600">
-              ₪{product.price?.ils?.toFixed(2) || '0.00'}
-            </span>
-          </div>
-
-          {/* ⭐ Add to Cart Button / View Product Button */}
-          {hasVariants ? (
-            // אם יש וריאנטים - הצג כפתור "צפה במוצר"
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={!product.stock?.available}
-            >
-              {product.stock?.available ? (
-                'בחר אפשרויות'
-              ) : (
-                'אזל מהמלאי'
-              )}
-            </Button>
-          ) : (
-            // אם אין וריאנטים - הצג כפתור "הוסף לעגלה"
-            <Button
-              className="w-full"
+          {/* Hover Overlay with CTA */}
+          <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-500 flex items-end justify-center pb-8 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+            <button
               onClick={handleAddToCart}
-              disabled={adding || !product.stock?.available}
+              disabled={adding || !product.stock?.available || hasVariants}
+              className="bg-white text-black px-8 py-3 text-sm font-light tracking-widest hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {adding ? (
                 'מוסיף...'
+              ) : hasVariants ? (
+                <>
+                  בחר אפשרויות
+                  <ArrowLeft className="h-4 w-4" />
+                </>
               ) : product.stock?.available ? (
                 <>
-                  <ShoppingCart className="h-4 w-4 ml-2" />
                   הוסף לעגלה
+                  <ArrowLeft className="h-4 w-4" />
                 </>
               ) : (
                 'אזל מהמלאי'
               )}
-            </Button>
+            </button>
+          </div>
+        </div>
+
+        {/* Content - Minimal & Elegant */}
+        <div className="p-4 text-center">
+          {/* Product Name - Aesthetic Font */}
+          <h3 className="font-light text-sm tracking-widest text-neutral-800 mb-2 uppercase line-clamp-1">
+            {product.name_he}
+          </h3>
+
+          {/* Price - Clean & Simple */}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            {hasDiscount && product.originalPrice?.ils && (
+              <span className="text-xs text-neutral-400 line-through font-light">
+                ₪{product.originalPrice.ils.toFixed(0)}
+              </span>
+            )}
+            <span className="text-base font-normal text-black tracking-wide">
+              ₪{product.price?.ils?.toFixed(0) || '0'}
+            </span>
+          </div>
+
+          {/* Tags - Clickable Pills */}
+          {product.tags && product.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 justify-center mt-2">
+              {product.tags.slice(0, 2).map((tag) => (
+                <button
+                  key={tag}
+                  onClick={(e) => handleTagClick(e, tag)}
+                  className="px-2 py-0.5 text-xs font-light tracking-wide bg-neutral-100 hover:bg-black hover:text-white transition-all rounded-full"
+                >
+                  {tag}
+                </button>
+              ))}
+              {product.tags.length > 2 && (
+                <span className="px-2 py-0.5 text-xs font-light text-neutral-400">
+                  +{product.tags.length - 2}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>

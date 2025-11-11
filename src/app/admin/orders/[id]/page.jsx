@@ -27,12 +27,16 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 const statusConfig = {
-  pending: { label: 'ממתינה', className: 'bg-yellow-100 text-yellow-800' },
-  confirmed: { label: 'אושרה', className: 'bg-blue-100 text-blue-800' },
-  processing: { label: 'בטיפול', className: 'bg-purple-100 text-purple-800' },
-  shipped: { label: 'נשלחה', className: 'bg-orange-100 text-orange-800' },
-  delivered: { label: 'נמסרה', className: 'bg-green-100 text-green-800' },
-  cancelled: { label: 'בוטלה', className: 'bg-red-100 text-red-800' }
+  pending: { label: 'ממתין לאישור', className: 'bg-yellow-100 text-yellow-800' },
+  payment_hold: { label: 'מסגרת אשראי תפוסה', className: 'bg-orange-100 text-orange-800' },
+  ordered: { label: 'הוזמן מארה"ב', className: 'bg-blue-100 text-blue-800' },
+  cancelled: { label: 'בוטל', className: 'bg-red-100 text-red-800' },
+  arrived_us_warehouse: { label: 'הגיע למחסן ארה"ב', className: 'bg-indigo-100 text-indigo-800' },
+  shipped_to_israel: { label: 'נשלח לישראל', className: 'bg-purple-100 text-purple-800' },
+  customs_israel: { label: 'במכס בישראל', className: 'bg-pink-100 text-pink-800' },
+  arrived_israel_warehouse: { label: 'הגיע למחסן בישראל', className: 'bg-cyan-100 text-cyan-800' },
+  shipped_to_customer: { label: 'נשלח ללקוח', className: 'bg-teal-100 text-teal-800' },
+  delivered: { label: 'נמסר', className: 'bg-green-100 text-green-800' }
 };
 
 export default function OrderDetailPage() {
@@ -391,11 +395,16 @@ export default function OrderDetailPage() {
                   className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">בחר סטטוס</option>
-                  <option value="confirmed">אושרה</option>
-                  <option value="processing">בטיפול</option>
-                  <option value="shipped">נשלחה</option>
-                  <option value="delivered">נמסרה</option>
-                  <option value="cancelled">בוטלה</option>
+                  <option value="pending">ממתין לאישור</option>
+                  <option value="payment_hold">מסגרת אשראי תפוסה</option>
+                  <option value="ordered">הוזמן מארה"ב</option>
+                  <option value="arrived_us_warehouse">הגיע למחסן ארה"ב</option>
+                  <option value="shipped_to_israel">נשלח לישראל</option>
+                  <option value="customs_israel">במכס בישראל</option>
+                  <option value="arrived_israel_warehouse">הגיע למחסן בישראל</option>
+                  <option value="shipped_to_customer">נשלח ללקוח</option>
+                  <option value="delivered">נמסר</option>
+                  <option value="cancelled">בוטל</option>
                 </select>
               </div>
 

@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import ImageUpload from '@/components/admin/ImageUpload';
 import VariantManager from '@/components/admin/VariantManager';
+import TagInput from '@/components/admin/TagInput';
 import Image from 'next/image';
 
 export default function ProductEditPage() {
@@ -686,19 +687,19 @@ export default function ProductEditPage() {
                   />
                 </div>
 
-                {/* Tags */}
-                <div>
-                  <Label htmlFor="tags">תגיות (מופרדות בפסיקים)</Label>
-                  <Input
-                    id="tags"
-                    {...register('tags')}
-                    className="mt-1"
-                    placeholder="מחשב נייד, Dell, גיימינג, 2024"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    הפרד תגיות בפסיקים לשיפור החיפוש
-                  </p>
-                </div>
+                {/* Tags with Smart Autocomplete */}
+                <Controller
+                  name="tags"
+                  control={control}
+                  render={({ field }) => (
+                    <TagInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      label="תגיות לשיפור החיפוש"
+                      placeholder="הקלד תג או בחר מהרשימה..."
+                    />
+                  )}
+                />
               </div>
             </div>
 

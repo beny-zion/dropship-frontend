@@ -4,10 +4,8 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import Image from 'next/image';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -64,111 +62,185 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-16 flex justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">הרשמה</CardTitle>
-          <CardDescription>צור חשבון חדש כדי להתחיל לקנות</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="w-full max-w-lg">
+        {/* Logo */}
+        <div className="text-center mb-12">
+          <Link href="/" className="inline-block">
+            <Image
+              src="/logo-full.svg"
+              alt="TORINO"
+              width={180}
+              height={50}
+              priority
+              className="mx-auto"
+            />
+          </Link>
+        </div>
+
+        {/* Main Card */}
+        <div className="border border-neutral-200 p-8">
+          <h1 className="text-2xl font-light tracking-wide text-center mb-8">הרשמה</h1>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Google Sign-In Button */}
+            <div className="space-y-5">
+              <GoogleSignInButton />
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-neutral-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-neutral-500 font-light">או הרשם באימייל</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">שם פרטי</Label>
-                <Input
+                <label htmlFor="firstName" className="block text-sm font-light tracking-wide">
+                  שם פרטי
+                </label>
+                <input
                   id="firstName"
                   name="firstName"
                   type="text"
                   required
+                  placeholder="שם"
                   value={formData.firstName}
                   onChange={handleChange}
+                  className="w-full px-4 py-3 border border-neutral-200 focus:outline-none focus:border-black transition-colors font-light"
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="lastName">שם משפחה</Label>
-                <Input
+                <label htmlFor="lastName" className="block text-sm font-light tracking-wide">
+                  שם משפחה
+                </label>
+                <input
                   id="lastName"
                   name="lastName"
                   type="text"
                   required
+                  placeholder="משפחה"
                   value={formData.lastName}
                   onChange={handleChange}
+                  className="w-full px-4 py-3 border border-neutral-200 focus:outline-none focus:border-black transition-colors font-light"
                 />
               </div>
             </div>
 
+            {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="email">אימייל</Label>
-              <Input
+              <label htmlFor="email" className="block text-sm font-light tracking-wide">
+                אימייל
+              </label>
+              <input
                 id="email"
                 name="email"
                 type="email"
                 required
-                placeholder="example@mail.com"
+                placeholder="your@email.com"
                 value={formData.email}
                 onChange={handleChange}
+                className="w-full px-4 py-3 border border-neutral-200 focus:outline-none focus:border-black transition-colors font-light"
               />
             </div>
 
+            {/* Phone Field - Optional */}
             <div className="space-y-2">
-              <Label htmlFor="phone">טלפון</Label>
-              <Input
+              <label htmlFor="phone" className="block text-sm font-light tracking-wide">
+                טלפון <span className="text-neutral-400">(אופציונלי)</span>
+              </label>
+              <input
                 id="phone"
                 name="phone"
                 type="tel"
-                required
                 placeholder="050-1234567"
                 value={formData.phone}
                 onChange={handleChange}
+                className="w-full px-4 py-3 border border-neutral-200 focus:outline-none focus:border-black transition-colors font-light"
               />
+              <p className="text-xs text-neutral-500 font-light">ניתן להשלים במעמד ההזמנה</p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">סיסמה</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                placeholder="לפחות 6 תווים"
-                value={formData.password}
-                onChange={handleChange}
-              />
+            {/* Password Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-light tracking-wide">
+                  סיסמה
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  placeholder="לפחות 6 תווים"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-neutral-200 focus:outline-none focus:border-black transition-colors font-light"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-light tracking-wide">
+                  אימות סיסמה
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  placeholder="הזן שוב"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-neutral-200 focus:outline-none focus:border-black transition-colors font-light"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">אימות סיסמה</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                placeholder="הזן את הסיסמה שוב"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
-            </div>
-
+            {/* Error Message */}
             {error && (
-              <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 text-sm font-light">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'רושם...' : 'הרשם'}
-            </Button>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-black text-white font-light tracking-wide py-3 px-4 hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'רושם...' : 'הירשם'}
+            </button>
+
+            {/* Terms */}
+            <p className="text-xs text-neutral-500 text-center font-light">
+              בהרשמה, אתה מסכים ל
+              <Link href="/terms" className="text-black hover:opacity-70 transition-opacity mx-1">
+                תנאי השימוש
+              </Link>
+              ול
+              <Link href="/privacy" className="text-black hover:opacity-70 transition-opacity mx-1">
+                מדיניות הפרטיות
+              </Link>
+            </p>
           </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-600">
+        </div>
+
+        {/* Footer Links */}
+        <div className="text-center mt-8">
+          <p className="text-neutral-600 font-light">
             כבר יש לך חשבון?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline">
+            <Link href="/login" className="text-black hover:opacity-70 transition-opacity">
               התחבר
             </Link>
           </p>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

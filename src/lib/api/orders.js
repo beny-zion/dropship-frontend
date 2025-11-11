@@ -104,21 +104,31 @@ export const updateOrderStatus = async (id, status) => {
  */
 export const ORDER_STATUSES = {
   PENDING: 'pending',
-  PROCESSING: 'processing',
-  SHIPPED: 'shipped',
-  DELIVERED: 'delivered',
-  CANCELLED: 'cancelled'
+  PAYMENT_HOLD: 'payment_hold',
+  ORDERED: 'ordered',
+  CANCELLED: 'cancelled',
+  ARRIVED_US_WAREHOUSE: 'arrived_us_warehouse',
+  SHIPPED_TO_ISRAEL: 'shipped_to_israel',
+  CUSTOMS_ISRAEL: 'customs_israel',
+  ARRIVED_ISRAEL_WAREHOUSE: 'arrived_israel_warehouse',
+  SHIPPED_TO_CUSTOMER: 'shipped_to_customer',
+  DELIVERED: 'delivered'
 };
 
 /**
  * Order status labels (Hebrew)
  */
 export const ORDER_STATUS_LABELS = {
-  pending: 'ממתין',
-  processing: 'בטיפול',
-  shipped: 'נשלח',
-  delivered: 'נמסר',
-  cancelled: 'בוטל'
+  pending: 'ממתין לאישור',
+  payment_hold: 'מסגרת אשראי תפוסה',
+  ordered: 'הוזמן מארה"ב',
+  cancelled: 'בוטל',
+  arrived_us_warehouse: 'הגיע למחסן ארה"ב',
+  shipped_to_israel: 'נשלח לישראל',
+  customs_israel: 'במכס בישראל',
+  arrived_israel_warehouse: 'הגיע למחסן בישראל',
+  shipped_to_customer: 'נשלח אליך',
+  delivered: 'נמסר'
 };
 
 /**
@@ -126,8 +136,13 @@ export const ORDER_STATUS_LABELS = {
  */
 export const ORDER_STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800',
-  processing: 'bg-blue-100 text-blue-800',
-  shipped: 'bg-purple-100 text-purple-800',
-  delivered: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800'
+  payment_hold: 'bg-orange-100 text-orange-800',
+  ordered: 'bg-blue-100 text-blue-800',
+  cancelled: 'bg-red-100 text-red-800',
+  arrived_us_warehouse: 'bg-indigo-100 text-indigo-800',
+  shipped_to_israel: 'bg-purple-100 text-purple-800',
+  customs_israel: 'bg-pink-100 text-pink-800',
+  arrived_israel_warehouse: 'bg-cyan-100 text-cyan-800',
+  shipped_to_customer: 'bg-teal-100 text-teal-800',
+  delivered: 'bg-green-100 text-green-800'
 };

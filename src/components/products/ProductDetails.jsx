@@ -21,10 +21,13 @@ import {
   Plane,
   CheckCircle,
   Info,
-  Globe
+  Globe,
+  Tag
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function ProductDetails({ product }) {
+  const router = useRouter();
   const { addToCart } = useCart();
 
   // תמיכה בשני מבני תמונות
@@ -214,12 +217,12 @@ export default function ProductDetails({ product }) {
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-4 lg:gap-6">
+    <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
       {/* תמונות */}
-      <div className="space-y-2 md:space-y-3">
+      <div className="space-y-4">
         {/* תמונה ראשית עם זום */}
         <div
-          className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 cursor-zoom-in"
+          className="relative aspect-square bg-neutral-50 overflow-hidden cursor-zoom-in"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onMouseMove={handleMouseMove}
@@ -267,41 +270,27 @@ export default function ProductDetails({ product }) {
             </div>
           )}
 
-          {/* Badges on Image */}
-          <div className="absolute top-2 md:top-4 right-2 md:right-4 flex flex-col gap-1.5 md:gap-2">
+          {/* Badges on Image - Minimal */}
+          <div className="absolute top-4 right-4 flex flex-col gap-2">
             {hasDiscount && (
-              <Badge className="bg-red-500 text-white shadow-lg text-xs">
+              <div className="bg-black text-white px-3 py-1 text-xs font-light tracking-wider">
                 -{product.discount}%
-              </Badge>
+              </div>
             )}
-            {freeShipping && (
-              <Badge className="bg-green-500 text-white shadow-lg text-xs">
-                משלוח חינם
-              </Badge>
-            )}
-            {product.featured && (
-              <Badge className="bg-blue-500 text-white shadow-lg text-xs">
-                מומלץ
-              </Badge>
-            )}
-            <Badge className="bg-purple-500 text-white shadow-lg flex items-center gap-1 text-xs">
-              <Globe className="w-3 h-3" />
-              מארה&quot;ב
-            </Badge>
           </div>
         </div>
 
-        {/* תמונות ממוזערות - תמיד מציג את כל תמונות המוצר */}
+        {/* תמונות ממוזערות - Minimal Gallery */}
         {galleryImages.length > 0 && (
-          <div className="grid grid-cols-4 gap-1.5 md:gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {galleryImages.slice(0, 4).map((image, index) => (
               <button
                 key={index}
                 onClick={() => setSelectedImage(image)}
-                className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all hover:border-blue-400 ${
+                className={`relative aspect-square bg-neutral-50 overflow-hidden transition-all hover:opacity-75 ${
                   selectedImage === image
-                    ? 'border-blue-600 ring-2 ring-blue-200'
-                    : 'border-gray-200'
+                    ? 'ring-2 ring-black'
+                    : ''
                 }`}
               >
                 {image.startsWith('data:') ? (
@@ -324,24 +313,24 @@ export default function ProductDetails({ product }) {
           </div>
         )}
 
-        {/* Variant Selectors - מתחת לגלריה */}
+        {/* Variant Selectors - Minimal Design */}
         {hasVariants && (
-          <div className="space-y-2 md:space-y-3">
+          <div className="space-y-4 border-t border-neutral-200 pt-4">
             {/* Color Selector */}
             {availableColors.length > 0 && (
               <div>
-                <Label className="text-sm font-semibold mb-2 block">
-                  בחר צבע {selectedColor && `(${selectedColor})`}
-                </Label>
+                <h4 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-3">
+                  צבע {selectedColor && `- ${selectedColor}`}
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {availableColors.map((color) => (
                     <button
                       key={color}
                       onClick={() => handleColorSelect(color)}
-                      className={`px-3 py-1.5 text-sm rounded-lg border-2 transition-all font-medium ${
+                      className={`px-4 py-2 text-sm font-light tracking-wide transition-all border ${
                         selectedColor === color
-                          ? 'border-blue-600 bg-blue-50 text-blue-900'
-                          : 'border-gray-200 hover:border-blue-300 bg-white'
+                          ? 'border-black bg-black text-white'
+                          : 'border-neutral-300 hover:border-black bg-white'
                       }`}
                     >
                       {color}
@@ -354,18 +343,18 @@ export default function ProductDetails({ product }) {
             {/* Size Selector */}
             {availableSizes.length > 0 && (
               <div>
-                <Label className="text-sm font-semibold mb-2 block">
-                  בחר מידה {selectedSize && `(${selectedSize})`}
-                </Label>
+                <h4 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-3">
+                  מידה {selectedSize && `- ${selectedSize}`}
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {availableSizes.map((size) => (
                     <button
                       key={size}
                       onClick={() => handleSizeSelect(size)}
-                      className={`px-3 py-1.5 text-sm rounded-lg border-2 transition-all font-medium min-w-[50px] ${
+                      className={`px-4 py-2 text-sm font-light tracking-wide transition-all border min-w-[60px] ${
                         selectedSize === size
-                          ? 'border-blue-600 bg-blue-50 text-blue-900'
-                          : 'border-gray-200 hover:border-blue-300 bg-white'
+                          ? 'border-black bg-black text-white'
+                          : 'border-neutral-300 hover:border-black bg-white'
                       }`}
                     >
                       {size}
@@ -396,48 +385,44 @@ export default function ProductDetails({ product }) {
       </div>
 
       {/* פרטים */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* כותרת */}
         <div>
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <Badge variant="outline" className="text-xs">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <span className="text-xs font-light tracking-widest uppercase text-neutral-500">
               {product.category === 'electronics' ? 'אלקטרוניקה' :
                product.category === 'fashion' ? 'אופנה' :
                product.category === 'home' ? 'בית וגינה' :
                product.category === 'sports' ? 'ספורט' :
                product.category === 'toys' ? 'צעצועים' :
                product.category}
-            </Badge>
+            </span>
             {product.asin && (
-              <span className="text-xs text-gray-500">ASIN: {product.asin}</span>
+              <span className="text-xs font-light text-neutral-400">ASIN: {product.asin}</span>
             )}
-            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-300">
-              <Globe className="w-3 h-3 mr-1" />
-              יבוא אישי מארה&quot;ב
-            </Badge>
           </div>
 
-          <h1 className="text-3xl lg:text-4xl font-bold mb-3 leading-tight">
+          <h1 className="text-3xl lg:text-4xl font-light tracking-wide mb-4 leading-tight">
             {product.name_he}
           </h1>
         </div>
 
-        <Separator />
+        <div className="border-t border-neutral-200 pt-6" />
 
         {/* מחיר */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
-          <div className="flex items-baseline gap-3 mb-2">
-            <span className="text-4xl lg:text-5xl font-bold text-blue-600">
-              ₪{currentPrice.toFixed(2)}
+        <div className="space-y-3">
+          <div className="flex items-baseline gap-3">
+            <span className="text-4xl lg:text-5xl font-normal tracking-tight">
+              ₪{currentPrice.toFixed(0)}
             </span>
             {hasDiscount && product.originalPrice?.ils && (
               <>
-                <span className="text-xl text-gray-400 line-through">
-                  ₪{product.originalPrice.ils.toFixed(2)}
+                <span className="text-xl text-neutral-400 line-through font-light">
+                  ₪{product.originalPrice.ils.toFixed(0)}
                 </span>
-                <Badge className="bg-red-500 text-white">
-                  חסוך {product.discount}%
-                </Badge>
+                <span className="text-sm font-light text-red-600">
+                  -{product.discount}%
+                </span>
               </>
             )}
           </div>
@@ -462,89 +447,102 @@ export default function ProductDetails({ product }) {
 
         {/* תיאור המוצר */}
         {product.description_he && (
-          <div>
-            <h3 className="font-bold text-xl mb-3">תיאור המוצר</h3>
-            <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-line bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="border-t border-neutral-200 pt-6">
+            <h3 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-4">תיאור</h3>
+            <div className="text-neutral-700 text-sm font-light leading-relaxed whitespace-pre-line">
               {product.description_he}
             </div>
           </div>
         )}
 
+        {/* תגים */}
+        {product.tags && product.tags.length > 0 && (
+          <div className="border-t border-neutral-200 pt-6">
+            <h3 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-4 flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              תגים
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {product.tags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => router.push(`/products?tags=${encodeURIComponent(tag)}`)}
+                  className="px-4 py-2 text-sm font-light tracking-wide bg-neutral-100 hover:bg-black hover:text-white transition-all rounded-full"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quantity Selector and Add to Cart */}
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border-2 border-green-200 space-y-3">
+        <div className="border-t border-neutral-200 pt-6 space-y-4">
           {/* Quantity Selector */}
           <div>
-            <Label className="text-sm font-semibold mb-2 block">בחר כמות</Label>
+            <h4 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-3">כמות</h4>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="icon"
+              <button
                 onClick={decreaseQuantity}
                 disabled={quantity <= 1}
-                className="h-10 w-10 bg-white hover:bg-gray-50"
+                className="h-10 w-10 border border-neutral-300 hover:border-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <Minus className="h-4 w-4" />
-              </Button>
-              <div className="flex-1 text-center bg-white rounded-lg py-2 border border-gray-200">
-                <span className="text-xl font-bold text-gray-900">{quantity}</span>
-                <span className="text-xs text-gray-500 mr-2">יחידות</span>
+              </button>
+              <div className="flex-1 text-center border border-neutral-300 py-2">
+                <span className="text-lg font-normal">{quantity}</span>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
+              <button
                 onClick={increaseQuantity}
                 disabled={quantity >= 2}
-                className="h-10 w-10 bg-white hover:bg-gray-50"
+                className="h-10 w-10 border border-neutral-300 hover:border-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <Plus className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
-            <p className="text-xs text-gray-600 mt-1.5 text-center">
-              מקסימום 2 יחידות להזמנה
+            <p className="text-xs font-light text-neutral-500 mt-2 text-center tracking-wide">
+              מקסימום 2 יחידות
             </p>
           </div>
 
           {/* Add to Cart Button */}
-          <Button
-            size="lg"
-            className="w-full text-base md:text-lg h-12 md:h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+          <button
             onClick={handleAddToCart}
             disabled={adding || !product.stock?.available}
+            className="w-full py-4 text-sm font-light tracking-widest uppercase bg-black text-white hover:bg-neutral-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {adding ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2"></div>
-                מוסיף לעגלה...
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                מוסיף...
               </>
             ) : (
               <>
-                <ShoppingCart className="h-5 w-5 ml-2" />
-                הזמן עכשיו {quantity > 1 ? `(${quantity} יחידות)` : ''}
+                הוסף לעגלה
+                {quantity > 1 && ` (${quantity})`}
               </>
             )}
-          </Button>
+          </button>
 
           {/* Price reminder */}
-          <div className="text-center pt-2 border-t border-green-300">
-            <p className="text-sm font-semibold text-gray-700">
-              סה"כ לתשלום: <span className="text-blue-600 text-lg">₪{(currentPrice * quantity).toFixed(2)}</span>
-            </p>
-          </div>
+          {quantity > 1 && (
+            <div className="text-center py-2 border-t border-neutral-200">
+              <p className="text-sm font-light text-neutral-600 tracking-wide">
+                סה"כ: <span className="text-black font-normal">₪{(currentPrice * quantity).toFixed(0)}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* תכונות */}
         {product.features && product.features.length > 0 && (
-          <div>
-            <h3 className="font-bold text-xl mb-3">תכונות עיקריות</h3>
-            <ul className="space-y-2 bg-green-50 rounded-lg p-4 border border-green-200">
+          <div className="border-t border-neutral-200 pt-6">
+            <h3 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-4">תכונות</h3>
+            <ul className="space-y-2">
               {product.features.map((feature, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm">
-                  <span className="text-green-600 mt-0.5 flex-shrink-0">
-                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </span>
-                  <span className="text-gray-800 leading-relaxed">{feature}</span>
+                <li key={index} className="flex items-start gap-2 text-sm font-light text-neutral-700">
+                  <span className="text-neutral-400 mt-1">•</span>
+                  <span className="leading-relaxed">{feature}</span>
                 </li>
               ))}
             </ul>
@@ -553,28 +551,26 @@ export default function ProductDetails({ product }) {
 
         {/* מפרט טכני */}
         {product.specifications && Object.keys(product.specifications).filter(key => product.specifications[key]).length > 0 && (
-          <div>
-            <h3 className="font-bold text-xl mb-3">מפרט טכני</h3>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <dl className="grid grid-cols-1 gap-2 text-sm">
-                {Object.entries(product.specifications).map(([key, value]) => (
-                  value && (
-                    <div key={key} className="flex justify-between border-b border-gray-200 pb-2 last:border-0">
-                      <dt className="text-gray-600 font-medium">
-                        {key === 'brand' ? 'מותג' :
-                         key === 'color' ? 'צבע' :
-                         key === 'size' ? 'גודל' :
-                         key === 'weight' ? 'משקל' :
-                         key === 'dimensions' ? 'מידות' :
-                         key === 'material' ? 'חומר' :
-                         key === 'model' ? 'דגם' : key}
-                      </dt>
-                      <dd className="font-semibold text-gray-900">{value}</dd>
-                    </div>
-                  )
-                ))}
-              </dl>
-            </div>
+          <div className="border-t border-neutral-200 pt-6">
+            <h3 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-4">מפרט</h3>
+            <dl className="space-y-2 text-sm">
+              {Object.entries(product.specifications).map(([key, value]) => (
+                value && (
+                  <div key={key} className="flex justify-between py-2 border-b border-neutral-100 last:border-0">
+                    <dt className="text-neutral-600 font-light">
+                      {key === 'brand' ? 'מותג' :
+                       key === 'color' ? 'צבע' :
+                       key === 'size' ? 'גודל' :
+                       key === 'weight' ? 'משקל' :
+                       key === 'dimensions' ? 'מידות' :
+                       key === 'material' ? 'חומר' :
+                       key === 'model' ? 'דגם' : key}
+                    </dt>
+                    <dd className="font-normal text-black">{value}</dd>
+                  </div>
+                )
+              ))}
+            </dl>
           </div>
         )}
 
@@ -667,47 +663,35 @@ export default function ProductDetails({ product }) {
         </div>
 
         {/* זמינות */}
-        <div>
+        <div className="border-t border-neutral-200 pt-6">
           {product.stock?.available ? (
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2.5 rounded-lg border border-green-200">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-sm font-semibold">זמין להזמנה - נרכש עבורך מיד לאחר האישור</span>
+            <div className="flex items-center gap-2 text-sm font-light tracking-wide">
+              <CheckCircle className="h-4 w-4 text-neutral-600" />
+              <span className="text-neutral-700">זמין להזמנה</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200">
-              <Package className="h-4 w-4" />
-              <span className="text-sm font-semibold">כרגע לא זמין - נעדכן כשיחזור למלאי</span>
+            <div className="flex items-center gap-2 text-sm font-light tracking-wide">
+              <Package className="h-4 w-4 text-neutral-400" />
+              <span className="text-neutral-500">לא זמין כרגע</span>
             </div>
           )}
         </div>
 
-        <Separator />
-
-        {/* כפתור מועדפים */}
-        <div>
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full text-base md:text-lg h-10 md:h-12 border-2"
-          >
-            <Heart className="h-5 w-5 ml-2" />
-            הוסף למועדפים
-          </Button>
-        </div>
-
-        {/* Trust Badges */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="text-center p-2 bg-gray-50 rounded-lg border">
-            <Shield className="h-5 w-5 mx-auto mb-1 text-blue-600" />
-            <p className="text-[10px] md:text-xs font-semibold">תשלום מאובטח</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg border">
-            <RotateCcw className="h-5 w-5 mx-auto mb-1 text-blue-600" />
-            <p className="text-[10px] md:text-xs font-semibold">החזרה תוך 30 יום</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg border">
-            <Truck className="h-5 w-5 mx-auto mb-1 text-blue-600" />
-            <p className="text-[10px] md:text-xs font-semibold">מעקב מלא</p>
+        {/* Trust Badges - Minimal */}
+        <div className="border-t border-neutral-200 pt-6">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <Shield className="h-5 w-5 mx-auto mb-2 text-neutral-600" />
+              <p className="text-xs font-light text-neutral-600 tracking-wide">תשלום מאובטח</p>
+            </div>
+            <div>
+              <RotateCcw className="h-5 w-5 mx-auto mb-2 text-neutral-600" />
+              <p className="text-xs font-light text-neutral-600 tracking-wide">החזרות בקלות</p>
+            </div>
+            <div>
+              <Truck className="h-5 w-5 mx-auto mb-2 text-neutral-600" />
+              <p className="text-xs font-light text-neutral-600 tracking-wide">משלוח מעוקב</p>
+            </div>
           </div>
         </div>
 

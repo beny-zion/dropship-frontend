@@ -1,65 +1,63 @@
-'use client';
+import ProductPageClient from '@/components/products/ProductPageClient';
+import { notFound } from 'next/navigation';
 
-import { use } from 'react';
-import { useProduct } from '@/lib/hooks/useProducts';
-import ProductDetails from '@/components/products/ProductDetails';
-import Loading from '@/components/shared/Loading';
-import ErrorMessage from '@/components/shared/ErrorMessage';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+// Server Component - fetches product data
+export const dynamic = 'force-dynamic';
+export const revalidate = 60; // Revalidate every 60 seconds
 
-export default function ProductPage({ params }) {
-  const { id } = use(params);
-  const { data, isLoading, error, refetch } = useProduct(id);
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Loading />
-      </div>
+async function getProduct(id) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/products/${id}`,
+      {
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        notFound();
+      }
+      throw new Error('Failed to fetch product');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return null;
+  }
+}
+
+// Generate metadata for SEO
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const productData = await getProduct(id);
+
+  if (!productData || !productData.data) {
+    return {
+      title: 'מוצר לא נמצא',
+    };
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <ErrorMessage message={error.message} onRetry={refetch} />
-      </div>
-    );
-  }
+  const product = productData.data;
 
-  if (!data || !data.data) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <ErrorMessage message="מוצר לא נמצא" />
-      </div>
-    );
-  }
+  return {
+    title: `${product.name_he} - TORINO`,
+    description: product.description_he || product.name_he,
+    openGraph: {
+      title: product.name_he,
+      description: product.description_he || product.name_he,
+      images: product.images?.map(img => img.url) || [],
+    },
+  };
+}
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumbs */}
-      <div className="mb-6 flex items-center gap-2 text-sm text-gray-600">
-        <Link href="/" className="hover:text-blue-600">
-          בית
-        </Link>
-        <span>/</span>
-        <Link href="/products" className="hover:text-blue-600">
-          מוצרים
-        </Link>
-        <span>/</span>
-        <span className="text-gray-900">{data.data.name_he}</span>
-      </div>
+export default async function ProductPage({ params }) {
+  const { id } = await params;
+  const initialData = await getProduct(id);
 
-      {/* Product Details */}
-      <ProductDetails product={data.data} />
-
-      {/* Back button */}
-      <div className="mt-8">
-        <Link href="/products">
-          <Button variant="outline">← חזרה לכל המוצרים</Button>
-        </Link>
-      </div>
-    </div>
-  );
+  return <ProductPageClient productId={id} initialData={initialData} />;
 }

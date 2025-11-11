@@ -7,17 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { ExternalLink } from 'lucide-react';
-
-const statusConfig = {
-  pending: { label: 'ממתינה', color: 'bg-yellow-100 text-yellow-800' },
-  confirmed: { label: 'אושרה', color: 'bg-blue-100 text-blue-800' },
-  processing: { label: 'בטיפול', color: 'bg-purple-100 text-purple-800' },
-  shipped: { label: 'נשלחה', color: 'bg-orange-100 text-orange-800' },
-  delivered: { label: 'נמסרה', color: 'bg-green-100 text-green-800' },
-  cancelled: { label: 'בוטלה', color: 'bg-red-100 text-red-800' }
-};
+import { useStatusConfig } from '@/lib/hooks/useOrderStatuses';
 
 export default function RecentOrders({ orders = [] }) {
+  // Load dynamic status configuration
+  const { statusConfig, isLoading: statusLoading } = useStatusConfig();
   // Ensure orders is an array
   const orderList = Array.isArray(orders) ? orders : [];
 
@@ -81,7 +75,7 @@ export default function RecentOrders({ orders = [] }) {
 
               {/* Status */}
               <td className="py-3 px-4">
-                <Badge className={statusConfig[order.status]?.color || 'bg-gray-100'}>
+                <Badge className={statusConfig[order.status]?.className || 'bg-gray-100 text-gray-800'}>
                   {statusConfig[order.status]?.label || order.status}
                 </Badge>
               </td>

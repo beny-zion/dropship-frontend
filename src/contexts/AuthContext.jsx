@@ -11,15 +11,24 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // בדיקה אם יש משתמש מחובר בטעינה
+  // 🍪 Check if user is authenticated on load (via HttpOnly cookie)
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const checkAuth = async () => {
+      try {
+        // Try to get current user - if cookie exists, this will succeed
+        const response = await authApi.getMe();
+        if (response.success && response.user) {
+          setUser(response.user);
+        }
+      } catch (error) {
+        // No valid session - user is not logged in
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = async (credentials) => {
@@ -55,7 +64,7 @@ export function AuthProvider({ children }) {
   const updateUser = (updatedUserData) => {
     const updatedUser = { ...user, ...updatedUserData };
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    // 🍪 No need to save to localStorage - user data managed by backend
   };
 
   const value = {

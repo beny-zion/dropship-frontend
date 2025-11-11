@@ -6,7 +6,9 @@
       "Read(//c/Users/1/Desktop/אמזון/amazon-dropship/backend/**)",
       "Bash(cat src/app.js)",
       "Bash(cat ../backend/src/app.js)",
-      "Bash(npm install express-rate-limit)"
+      "Bash(npm install express-rate-limit)",
+      "Bash(cat:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

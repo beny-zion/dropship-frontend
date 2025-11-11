@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, AlertTriangle, Shield, Truck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CartPage() {
@@ -71,14 +71,16 @@ export default function CartPage() {
   // Redirect if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-16">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="max-w-md mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-4">נדרשת התחברות</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-3xl font-light tracking-wide mb-4">נדרשת התחברות</h2>
+          <p className="text-sm font-light text-neutral-600 mb-8 tracking-wide">
             כדי לצפות בעגלת הקניות, נא להתחבר תחילה
           </p>
           <Link href="/login?redirect=/cart">
-            <Button size="lg">התחבר</Button>
+            <button className="px-8 py-3 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all">
+              התחבר
+            </button>
           </Link>
         </div>
       </div>
@@ -88,9 +90,11 @@ export default function CartPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">טוען עגלה...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto"></div>
+          <p className="mt-4 text-sm font-light text-neutral-600 tracking-wide">טוען...</p>
+        </div>
       </div>
     );
   }
@@ -98,18 +102,18 @@ export default function CartPage() {
   // Empty cart
   if (!cart.items || cart.items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="max-w-md mx-auto text-center">
-          <ShoppingBag className="h-24 w-24 mx-auto text-gray-300 mb-6" />
-          <h2 className="text-2xl font-bold mb-4">העגלה ריקה</h2>
-          <p className="text-gray-600 mb-6">
-            עדיין לא הוספת מוצרים לעגלה. התחל לקנות עכשיו!
+          <ShoppingBag className="h-20 w-20 mx-auto text-neutral-300 mb-6" />
+          <h2 className="text-3xl font-light tracking-wide mb-4">העגלה ריקה</h2>
+          <p className="text-sm font-light text-neutral-600 mb-8 tracking-wide">
+            טרם הוספת מוצרים לעגלה
           </p>
           <Link href="/products">
-            <Button size="lg">
+            <button className="px-8 py-3 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all inline-flex items-center gap-2">
               צפה במוצרים
-              <ArrowRight className="mr-2 h-5 w-5" />
-            </Button>
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </Link>
         </div>
       </div>
@@ -120,37 +124,45 @@ export default function CartPage() {
   const hasUnavailableItems = cart.items.some(item => !item.product.stock.available);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">עגלת הקניות שלי</h1>
-          <p className="text-gray-600 mt-1">
-            {itemCount} {itemCount === 1 ? 'פריט' : 'פריטים'} בעגלה
-          </p>
+      <div className="border-b border-neutral-200">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-light tracking-widest uppercase mb-2">עגלת קניות</h1>
+              <p className="text-sm font-light text-neutral-600 tracking-wide">
+                {itemCount} {itemCount === 1 ? 'פריט' : 'פריטים'}
+              </p>
+            </div>
+            <button
+              onClick={handleClearCart}
+              className="text-sm font-light text-neutral-500 hover:text-black transition-colors underline underline-offset-4 tracking-wide"
+            >
+              רוקן עגלה
+            </button>
+          </div>
         </div>
-        <Button 
-          variant="ghost" 
-          onClick={handleClearCart} 
-          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-        >
-          <Trash2 className="h-4 w-4 ml-2" />
-          רוקן עגלה
-        </Button>
       </div>
 
       {/* Unavailable Items Alert */}
       {hasUnavailableItems && (
-        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-yellow-900">חלק מהמוצרים לא זמינים</p>
-            <p className="text-sm text-yellow-800">
-              מוצרים שאזלו מהמלאי מסומנים באדום. הסר אותם כדי להמשיך לקופה.
-            </p>
+        <div className="bg-neutral-50 border-b border-neutral-200">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-neutral-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-normal text-neutral-900 mb-1">חלק מהמוצרים אינם זמינים</p>
+                <p className="text-xs font-light text-neutral-600">
+                  הסר מוצרים לא זמינים כדי להמשיך לקופה
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      <div className="container mx-auto px-4 py-12">
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Cart Items */}
@@ -165,13 +177,13 @@ export default function CartPage() {
             return (
               <div
                 key={itemKey}
-                className={`bg-white border rounded-lg p-4 transition-all ${
-                  isUnavailable ? 'border-red-300 bg-red-50' : 'hover:shadow-md'
+                className={`border-b border-neutral-200 pb-6 transition-all ${
+                  isUnavailable ? 'opacity-50' : ''
                 }`}
               >
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex gap-6">
                   {/* Image */}
-                  <div className="relative h-32 sm:h-24 w-full sm:w-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                  <div className="relative h-32 w-32 flex-shrink-0 bg-neutral-50 overflow-hidden">
                     {(() => {
                       // ⭐ קודם נחפש תמונה של הווריאנט, אחר כך תמונה כללית
                       let imageUrl = null;
@@ -205,106 +217,94 @@ export default function CartPage() {
                       );
                     })()}
                     {isUnavailable && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                        <Badge className="bg-red-500 text-white">לא זמין</Badge>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60">
+                        <span className="bg-white px-3 py-1 text-xs font-light tracking-wider">לא זמין</span>
                       </div>
                     )}
                   </div>
 
                   {/* Details */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-start justify-between gap-4 mb-3">
                       <Link
                         href={`/products/${item.product.slug || item.product._id}`}
-                        className="font-semibold hover:text-blue-600 line-clamp-2 flex-1"
+                        className="font-light text-base hover:text-neutral-600 line-clamp-2 flex-1 transition-colors"
                       >
                         {item.product.name_he}
                       </Link>
                       <button
                         onClick={() => handleRemoveItem(item.product._id, item.product.name_he, item.variantSku)}
-                        className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
-                        title="הסר מהעגלה"
+                        className="text-neutral-400 hover:text-black p-1 flex-shrink-0 transition-colors"
+                        title="הסר"
                       >
-                        <Trash2 className="h-5 w-5" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
 
                     {/* Variant Details */}
                     {item.variant && (
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-3 mb-3">
                         {item.variant.color && (
-                          <Badge variant="outline" className="text-xs">
+                          <span className="text-xs font-light text-neutral-600">
                             צבע: {item.variant.color}
-                          </Badge>
+                          </span>
                         )}
                         {item.variant.size && (
-                          <Badge variant="outline" className="text-xs">
+                          <span className="text-xs font-light text-neutral-600">
                             מידה: {item.variant.size}
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     )}
 
                     {/* Stock Status */}
                     {isUnavailable && (
-                      <div className="mb-2">
-                        <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300">
-                          אזל מהמלאי
-                        </Badge>
+                      <div className="mb-3">
+                        <span className="text-xs font-light text-red-600">אזל מהמלאי</span>
                       </div>
                     )}
 
                     {/* Quantity & Price */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center justify-between gap-6">
                       {/* Quantity Controls */}
-                      <div className="flex items-center border rounded overflow-hidden">
+                      <div className="flex items-center border border-neutral-300">
                         <button
                           onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1, item.variantSku)}
                           disabled={item.quantity <= 1 || isUnavailable}
-                          className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          aria-label="הפחת כמות"
+                          className="px-3 py-2 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          aria-label="הפחת"
                         >
-                          <Minus className="h-4 w-4" />
+                          <Minus className="h-3 w-3" />
                         </button>
-                        <span className="px-4 py-2 border-x min-w-[3rem] text-center font-semibold">
+                        <span className="px-4 py-2 border-x border-neutral-300 min-w-[3rem] text-center font-normal text-sm">
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1, item.variantSku)}
                           disabled={item.quantity >= 2 || isUnavailable}
-                          className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          aria-label="הוסף כמות"
-                          title={item.quantity >= 2 ? "ניתן להזמין עד 2 יחידות בלבד" : "הוסף כמות"}
+                          className="px-3 py-2 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          aria-label="הוסף"
+                          title={item.quantity >= 2 ? "מקסימום 2 יחידות" : "הוסף"}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-3 w-3" />
                         </button>
                       </div>
 
                       {/* Price */}
-                      <div className="text-left">
-                        <div className="text-lg font-bold text-blue-600">
-                          ₪{item.subtotalPrice ? item.subtotalPrice.toFixed(2) : (item.price * item.quantity).toFixed(2)}
+                      <div className="text-right">
+                        <div className="text-lg font-normal tracking-tight">
+                          ₪{item.subtotalPrice ? item.subtotalPrice.toFixed(0) : (item.price * item.quantity).toFixed(0)}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          ₪{item.price.toFixed(2)} × {item.quantity}
+                        <div className="text-xs font-light text-neutral-500">
+                          ₪{item.price.toFixed(0)} × {item.quantity}
                         </div>
                       </div>
                     </div>
 
                     {/* Max Quantity Warning */}
                     {item.quantity >= 2 && (
-                      <p className="text-xs text-blue-600 mt-2 font-medium">
-                        הגעת למקסימום - 2 יחידות למוצר
-                      </p>
-                    )}
-
-                    {/* Low Stock Warning */}
-                    {item.product.stock.quantity &&
-                     item.product.stock.quantity < 5 &&
-                     item.product.stock.available &&
-                     item.quantity < 2 && (
-                      <p className="text-xs text-orange-600 mt-2">
-                        נותרו רק {item.product.stock.quantity} יחידות במלאי!
+                      <p className="text-xs font-light text-neutral-500 mt-3">
+                        מקסימום 2 יחידות
                       </p>
                     )}
                   </div>
@@ -316,33 +316,33 @@ export default function CartPage() {
 
         {/* Summary Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-white border rounded-lg p-6 sticky top-24 shadow-sm">
-            <h2 className="text-xl font-bold mb-6">סיכום הזמנה</h2>
+          <div className="border border-neutral-200 p-6">
+            <h2 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-6">סיכום הזמנה</h2>
 
             {/* Pricing Breakdown */}
-            <div className="space-y-3 mb-6 pb-6 border-b">
+            <div className="space-y-3 mb-6 pb-6 border-b border-neutral-200">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">סכום ביניים (כולל מע״מ):</span>
-                <span className="font-semibold">₪{cart.pricing.subtotal.toFixed(2)}</span>
+                <span className="font-light text-neutral-600">סכום ביניים:</span>
+                <span className="font-normal">₪{cart.pricing.subtotal.toFixed(0)}</span>
               </div>
-              <div className="flex justify-between text-xs text-gray-500 pr-4">
-                <span>מתוכו מע״מ (18%):</span>
-                <span>₪{cart.pricing.tax.toFixed(2)}</span>
+              <div className="flex justify-between text-xs font-light text-neutral-500 pr-4">
+                <span>המחיר כולל מע״מ (18%):</span>
+                <span>₪{cart.pricing.tax.toFixed(0)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">משלוח:</span>
+                <span className="font-light text-neutral-600">משלוח:</span>
                 {cart.pricing.shipping === 0 ? (
-                  <span className="text-green-600 font-semibold">חינם! 🎉</span>
+                  <span className="font-normal">חינם</span>
                 ) : (
-                  <span className="font-semibold">₪{cart.pricing.shipping.toFixed(2)}</span>
+                  <span className="font-normal">₪{cart.pricing.shipping.toFixed(0)}</span>
                 )}
               </div>
             </div>
 
             {/* Total */}
-            <div className="flex justify-between text-2xl font-bold mb-6">
-              <span>סה״כ לתשלום:</span>
-              <span className="text-blue-600">₪{cart.pricing.total.toFixed(2)}</span>
+            <div className="flex justify-between text-xl font-normal mb-6">
+              <span>סה״כ:</span>
+              <span>₪{cart.pricing.total.toFixed(0)}</span>
             </div>
 
             {/* Free Shipping Progress */}
@@ -362,70 +362,64 @@ export default function CartPage() {
             )}
 
             {/* Free Shipping Badge */}
-            {cart.pricing.shipping === 0 && (
+            {/* {cart.pricing.shipping === 0 && (
               <div className="bg-green-50 border border-green-200 text-green-900 text-sm p-4 rounded-lg mb-6 text-center">
                 <p className="font-semibold">🎉 זכית במשלוח חינם!</p>
               </div>
-            )}
+            )} */}
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              <Button
-                className="w-full text-lg h-14"
-                size="lg"
+              <button
                 onClick={handleCheckout}
                 disabled={hasUnavailableItems || cart.items.length === 0}
+                className="w-full py-4 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {hasUnavailableItems ? 'הסר מוצרים לא זמינים' : 'המשך לקופה'}
-              </Button>
+              </button>
 
               <Link href="/products">
-                <Button variant="outline" className="w-full" size="lg">
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <button className="w-full py-3 border border-neutral-300 text-sm font-light tracking-wide hover:border-black transition-colors flex items-center justify-center gap-2">
+                  <ArrowRight className="h-4 w-4" />
                   המשך בקניות
-                </Button>
+                </button>
               </Link>
             </div>
 
-            <Separator className="my-6" />
+            <div className="my-6 border-t border-neutral-200" />
 
-            {/* Trust Indicators */}
-            <div className="space-y-3 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>תשלום מאובטח 100%</span>
+            {/* Trust Indicators - Minimal */}
+            <div className="space-y-2.5 text-xs font-light text-neutral-700" dir="rtl">
+              <div className="flex items-center gap-2.5">
+                <Shield className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                <span>תשלום מאובטח</span>
               </div>
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>משלוח מהיר עד הבית</span>
+              <div className="flex items-center gap-2.5">
+                <Truck className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                <span>משלוח מהיר</span>
               </div>
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>החזרה חינם תוך 30 יום</span>
+              <div className="flex items-center gap-2.5">
+                <RefreshCw className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                <span>החזרות חינם</span>
               </div>
             </div>
           </div>
 
-          {/* Help Section */}
-          <div className="mt-6 bg-gray-50 border rounded-lg p-4">
-            <h3 className="font-semibold mb-2">צריך עזרה?</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              יש לך שאלות לגבי ההזמנה? אנחנו כאן בשבילך!
+          {/* Help Section - Minimal */}
+          <div className="mt-6 border border-neutral-200 p-4">
+            <h3 className="text-sm font-normal mb-2 tracking-wide">צריך עזרה?</h3>
+            <p className="text-xs font-light text-neutral-600 mb-3 tracking-wide">
+              יש שאלות? אנחנו כאן
             </p>
             <Link href="/contact">
-              <Button variant="outline" size="sm" className="w-full">
+              <button className="w-full py-2 border border-neutral-300 text-xs font-light tracking-wide hover:border-black transition-colors">
                 צור קשר
-              </Button>
+              </button>
             </Link>
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

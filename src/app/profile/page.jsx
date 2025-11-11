@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const updateProfileMutation = useUpdateProfile();
   const { updateUser } = useAuth();
 
-  const user = profileData?.user;
+  const user = profileData?.data?.user;
 
   const {
     register,
@@ -60,7 +60,7 @@ export default function ProfilePage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorMessage message="שגיאה בטעינת הפרופיל" />;
 
-  const stats = profileData?.stats;
+  const stats = profileData?.data?.stats;
 
   return (
     <div className="container max-w-4xl py-8">
