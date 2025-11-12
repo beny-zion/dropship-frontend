@@ -25,10 +25,13 @@ export default function ProductsPageClient({ initialData }) {
     tags: searchParams.get('tags') || '',
   });
 
-  const { data, isLoading, error, refetch } = useProducts(filters);
+  // Pass initialData to React Query
+  const { data, isLoading, error, refetch } = useProducts(filters, {
+    initialData: initialData,
+  });
 
-  // Use server data on first render
-  const currentData = isLoading && initialData ? initialData : data;
+  // Use the data (will be initialData on first render)
+  const currentData = data;
 
   const handleFilterChange = (key, value) => {
     const newFilters = {

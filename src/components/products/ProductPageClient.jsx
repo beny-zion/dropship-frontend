@@ -8,12 +8,16 @@ import Link from 'next/link';
 import { ChevronLeft, Home } from 'lucide-react';
 
 export default function ProductPageClient({ productId, initialData }) {
-  const { data, isLoading, error, refetch } = useProduct(productId);
+  // Pass initialData to React Query so it doesn't fetch unnecessarily
+  const { data, isLoading, error, refetch } = useProduct(productId, {
+    initialData: initialData,
+    enabled: !!productId,
+  });
 
-  // Use server data on first render
-  const currentData = isLoading && initialData ? initialData : data;
+  // Use the data (will be initialData on first render, then cached/refetched data)
+  const currentData = data;
 
-  if (isLoading && !initialData) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loading />
