@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useCategories } from '@/lib/hooks/useCategories';
-import { deleteCategory, createCategory, updateCategory } from '@/lib/api/categories';
+import { deleteCategory, createCategory, updateCategory, uploadCategoryImage } from '@/lib/api/categories';
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2, Eye, MousePointer } from 'lucide-react';
 import { toast } from 'sonner';
@@ -41,14 +41,55 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const handleFormSubmit = async (data) => {
+  const handleFormSubmit = async ({ formData, imageFile }) => {
     try {
       let response;
+
       if (editingCategory) {
-        response = await updateCategory(editingCategory._id, data);
+        // Update existing category
+        response = await updateCategory(editingCategory._id, formData);
+
+        // If there's a new image file, upload it
+        if (imageFile) {
+          await uploadCategoryImage(
+            editingCategory._id,
+            imageFile,
+            'main',
+            'image',
+            formData.mainImage?.alt || formData.name.he
+          );
+        }
+
         toast.success('הקטגוריה עודכנה בהצלחה');
       } else {
-        response = await createCategory(data);
+        // Create new category
+        if (imageFile) {
+          // First create category with a placeholder image URL
+          const tempFormData = {
+            ...formData,
+            mainImage: {
+              url: 'https://via.placeholder.com/400x300?text=Uploading...',
+              alt: formData.mainImage?.alt || formData.name.he,
+            },
+          };
+
+          response = await createCategory(tempFormData);
+
+          if (response.success) {
+            // Then upload the actual image
+            await uploadCategoryImage(
+              response.data._id,
+              imageFile,
+              'main',
+              'image',
+              formData.mainImage?.alt || formData.name.he
+            );
+          }
+        } else {
+          // Create category with URL
+          response = await createCategory(formData);
+        }
+
         toast.success('הקטגוריה נוצרה בהצלחה');
       }
 
@@ -58,6 +99,7 @@ export default function AdminCategoriesPage() {
         refetch();
       }
     } catch (err) {
+      console.error('Error saving category:', err);
       toast.error(err.response?.data?.message || 'שגיאה בשמירת הקטגוריה');
     }
   };
