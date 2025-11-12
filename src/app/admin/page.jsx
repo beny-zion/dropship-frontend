@@ -28,7 +28,7 @@ export default function AdminDashboard() {
         console.log('✅ Dashboard Stats KEYS:', result ? Object.keys(result) : 'null');
         return result;
       } catch (err) {
-        console.error('❌ Dashboard Stats Error:', err);
+        console.error('❌ Dashboard Stats Error:', err.message || err);
         throw err;
       }
     },
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
         console.log('✅ Recent Orders TYPE:', typeof result, Array.isArray(result));
         return result;
       } catch (err) {
-        console.error('❌ Recent Orders Error:', err);
+        console.error('❌ Recent Orders Error:', err.message || err);
         throw err;
       }
     },
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
         console.log('✅ Top Products:', result);
         return result;
       } catch (err) {
-        console.error('❌ Top Products Error:', err);
+        console.error('❌ Top Products Error:', err.message || err);
         throw err;
       }
     },
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
         console.log('✅ Sales Chart:', result);
         return result;
       } catch (err) {
-        console.error('❌ Sales Chart Error:', err);
+        console.error('❌ Sales Chart Error:', err.message || err);
         throw err;
       }
     },

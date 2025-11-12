@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useProducts } from '@/lib/hooks/useProducts';
 import ProductList from '@/components/products/ProductList';
@@ -13,8 +13,8 @@ export default function ProductsPageClient({ initialData }) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // קריאת הפרמטרים מה-URL בעת הטעינה הראשונית
-  const [filters, setFilters] = useState({
+  // Always sync filters with URL - no state needed
+  const filters = useMemo(() => ({
     page: parseInt(searchParams.get('page')) || 1,
     limit: 12,
     category: searchParams.get('category') || 'all',
@@ -23,7 +23,7 @@ export default function ProductsPageClient({ initialData }) {
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
     tags: searchParams.get('tags') || '',
-  });
+  }), [searchParams]);
 
   // Pass initialData to React Query
   const { data, isLoading, error, refetch } = useProducts(filters, {
@@ -39,9 +39,8 @@ export default function ProductsPageClient({ initialData }) {
       [key]: value,
       page: 1 // Reset to first page
     };
-    setFilters(newFilters);
 
-    // עדכון ה-URL
+    // עדכון ה-URL (filters will update automatically via useMemo)
     updateURL(newFilters);
   };
 
@@ -82,28 +81,15 @@ export default function ProductsPageClient({ initialData }) {
       search: query,
       page: 1
     };
-    setFilters(newFilters);
     updateURL(newFilters);
   };
 
   const handleReset = () => {
-    const resetFilters = {
-      page: 1,
-      limit: 12,
-      category: 'all',
-      sort: '-createdAt',
-      search: '',
-      minPrice: '',
-      maxPrice: '',
-      tags: '',
-    };
-    setFilters(resetFilters);
     router.push('/products', { scroll: false });
   };
 
   const handlePageChange = (newPage) => {
     const newFilters = { ...filters, page: newPage };
-    setFilters(newFilters);
     updateURL(newFilters);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

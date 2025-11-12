@@ -49,28 +49,6 @@ export default function SearchBar({ onSearch, initialValue = '' }) {
           </button>
         )}
       </div>
-
-      {/* Optional: Search suggestions or popular searches could go here */}
-      {isFocused && query.length === 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 p-4 md:p-6 bg-white border border-neutral-200 shadow-xl z-50 rounded-lg">
-          <p className="text-xs md:text-sm text-neutral-500 font-light tracking-wide mb-3">חיפושים פופולריים:</p>
-          <div className="flex flex-wrap gap-2">
-            {['חולצות', 'מכנסיים', 'נעליים', 'תיקים', 'אביזרים', 'מעילים'].map((term) => (
-              <button
-                key={term}
-                type="button"
-                onClick={() => {
-                  setQuery(term);
-                  onSearch(term);
-                }}
-                className="px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm border border-neutral-300 hover:border-black hover:bg-black hover:text-white transition-all duration-200 tracking-wide rounded-full"
-              >
-                {term}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </form>
   );
 }

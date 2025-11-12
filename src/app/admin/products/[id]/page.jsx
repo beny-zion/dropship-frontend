@@ -148,7 +148,7 @@ export default function ProductEditPage() {
         name_en: product.name_en || '',
         description_he: product.description_he || '',
         description_en: product.description_en || '',
-        category: product.category || '',
+        category: product.category?._id || product.category || '',
         subcategory: product.subcategory || '',
         tags: Array.isArray(product.tags) ? product.tags.join(', ') : '',
         'price.ils': product.price?.ils || 0,
@@ -522,6 +522,101 @@ export default function ProductEditPage() {
         {/* Form */}
         <div className="space-y-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* קישורי קניה - חובה לפחות אחד */}
+            <div className={`rounded-lg border-2 p-6 transition-colors ${
+              hasPurchaseLink
+                ? 'bg-white border-gray-200'
+                : 'bg-red-50 border-red-300'
+            }`}>
+              <div className="flex items-center gap-2 mb-4">
+                <ExternalLink className="w-5 h-5 text-blue-600" />
+                <h2 className="text-lg font-semibold">קישורי קניה</h2>
+                {!hasPurchaseLink && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded font-bold">
+                    חובה למלא לפחות אחד!
+                  </span>
+                )}
+                {hasPurchaseLink && (
+                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded font-bold">
+                    ✓
+                  </span>
+                )}
+              </div>
+
+              {!hasPurchaseLink && (
+                <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-red-800 font-medium">
+                    ⚠️ חובה להזין לפחות לינק אחד לרכישה! העובדים צריכים לדעת איפה להזמין את המוצר.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <Label
+                    htmlFor="links.amazon"
+                    className={!hasPurchaseLink ? "text-red-700 font-semibold" : ""}
+                  >
+                    קישור למוצר באמזון {!hasPurchaseLink && "*"}
+                  </Label>
+                  <Input
+                    id="links.amazon"
+                    type="url"
+                    {...register('links.amazon')}
+                    className={`mt-1 border-2 ${
+                      !hasPurchaseLink
+                        ? 'border-red-300 bg-red-50 focus:border-red-500'
+                        : 'border-gray-300 focus:border-blue-500'
+                    }`}
+                    dir="ltr"
+                    placeholder="https://www.amazon.com/..."
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    למוצרים מאמזון
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="links.affiliateUrl">קישור Affiliate (אופציונלי)</Label>
+                  <Input
+                    id="links.affiliateUrl"
+                    type="url"
+                    {...register('links.affiliateUrl')}
+                    className="mt-1"
+                    dir="ltr"
+                    placeholder="https://amzn.to/..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    לשיווק - לא נדרש לצורך הזמנה
+                  </p>
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="links.supplierUrl"
+                    className={!hasPurchaseLink ? "text-red-700 font-semibold" : ""}
+                  >
+                    קישור למוצר אצל הספק {!hasPurchaseLink && "*"}
+                  </Label>
+                  <Input
+                    id="links.supplierUrl"
+                    type="url"
+                    {...register('links.supplierUrl')}
+                    className={`mt-1 border-2 ${
+                      !hasPurchaseLink
+                        ? 'border-red-300 bg-red-50 focus:border-red-500'
+                        : 'border-gray-300 focus:border-blue-500'
+                    }`}
+                    dir="ltr"
+                    placeholder="https://karllagerfeldparis.com/products/..."
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    לספקים שאינם אמזון - קישור ישיר למוצר
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* תמונות */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h2 className="text-lg font-semibold mb-4">תמונות המוצר</h2>
@@ -1153,100 +1248,6 @@ export default function ProductEditPage() {
                     rows={3}
                     placeholder="איש קשר: Sarah&#10;זמן אספקה: 7 ימים&#10;תנאי תשלום: NET30"
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* קישורים - חובה לפחות אחד */}
-            <div className={`rounded-lg border-2 p-6 transition-colors ${
-              hasPurchaseLink
-                ? 'bg-white border-gray-200'
-                : 'bg-red-50 border-red-300'
-            }`}>
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-lg font-semibold">קישורי קניה</h2>
-                {!hasPurchaseLink && (
-                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded font-bold">
-                    חובה למלא לפחות אחד!
-                  </span>
-                )}
-                {hasPurchaseLink && (
-                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded font-bold">
-                    ✓
-                  </span>
-                )}
-              </div>
-
-              {!hasPurchaseLink && (
-                <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-red-800 font-medium">
-                    ⚠️ חובה להזין לפחות לינק אחד לרכישה! העובדים צריכים לדעת איפה להזמין את המוצר.
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div>
-                  <Label
-                    htmlFor="links.amazon"
-                    className={!hasPurchaseLink ? "text-red-700 font-semibold" : ""}
-                  >
-                    קישור למוצר באמזון {!hasPurchaseLink && "*"}
-                  </Label>
-                  <Input
-                    id="links.amazon"
-                    type="url"
-                    {...register('links.amazon')}
-                    className={`mt-1 border-2 ${
-                      !hasPurchaseLink
-                        ? 'border-red-300 bg-red-50 focus:border-red-500'
-                        : 'border-gray-300 focus:border-blue-500'
-                    }`}
-                    dir="ltr"
-                    placeholder="https://www.amazon.com/..."
-                  />
-                  <p className="text-xs text-gray-600 mt-1">
-                    למוצרים מאמזון
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="links.affiliateUrl">קישור Affiliate (אופציונלי)</Label>
-                  <Input
-                    id="links.affiliateUrl"
-                    type="url"
-                    {...register('links.affiliateUrl')}
-                    className="mt-1"
-                    dir="ltr"
-                    placeholder="https://amzn.to/..."
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    לשיווק - לא נדרש לצורך הזמנה
-                  </p>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="links.supplierUrl"
-                    className={!hasPurchaseLink ? "text-red-700 font-semibold" : ""}
-                  >
-                    קישור למוצר אצל הספק {!hasPurchaseLink && "*"}
-                  </Label>
-                  <Input
-                    id="links.supplierUrl"
-                    type="url"
-                    {...register('links.supplierUrl')}
-                    className={`mt-1 border-2 ${
-                      !hasPurchaseLink
-                        ? 'border-red-300 bg-red-50 focus:border-red-500'
-                        : 'border-gray-300 focus:border-blue-500'
-                    }`}
-                    dir="ltr"
-                    placeholder="https://karllagerfeldparis.com/products/..."
-                  />
-                  <p className="text-xs text-gray-600 mt-1">
-                    לספקים שאינם אמזון - קישור ישיר למוצר
-                  </p>
                 </div>
               </div>
             </div>
