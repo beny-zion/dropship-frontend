@@ -10,16 +10,7 @@ const ProductCarousel = dynamic(() => import('./ProductCarousel'));
 const PromotionalBanner = dynamic(() => import('./PromotionalBanner'));
 
 export default function SectionRenderer({ section, language = 'he', preview = false }) {
-  // Check visibility based on device
-  if (!preview && section.visibility) {
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
-
-    if (isMobile && !section.visibility.mobile) return null;
-    if (isTablet && !section.visibility.tablet) return null;
-    if (isDesktop && !section.visibility.desktop) return null;
-  }
+  // Note: This is a client component but receives server-fetched data via section.initialData
 
   // Check if section is active
   if (!preview && !section.isActive) return null;

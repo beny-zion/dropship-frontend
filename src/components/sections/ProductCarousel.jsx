@@ -1,15 +1,21 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProductCarousel({ section, language = 'he' }) {
   const { productCarousel } = section.content;
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Use initialData from server if available, otherwise fetch on client
+  const [products, setProducts] = useState(section.initialData || []);
+  const [loading, setLoading] = useState(!section.initialData);
   const [currentIndex, setCurrentIndex] = useState(0);
   const carouselRef = useRef(null);
 
   useEffect(() => {
+    // Only fetch if we don't have initialData from server
+    if (section.initialData) return;
+
     const fetchProducts = async () => {
       try {
         setLoading(true);
@@ -47,6 +53,7 @@ export default function ProductCarousel({ section, language = 'he' }) {
 
     fetchProducts();
   }, [
+    section.initialData,
     productCarousel.productSource,
     productCarousel.products,
     productCarousel.categoryFilter,

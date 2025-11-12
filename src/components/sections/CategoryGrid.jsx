@@ -16,10 +16,14 @@ const scrollbarHideStyle = `
 
 export default function CategoryGrid({ section, language = 'he' }) {
   const { categoryGrid } = section.content;
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Use initialData from server if available, otherwise fetch on client
+  const [categories, setCategories] = useState(section.initialData || []);
+  const [loading, setLoading] = useState(!section.initialData);
 
   useEffect(() => {
+    // Only fetch if we don't have initialData from server
+    if (section.initialData) return;
+
     const fetchCategories = async () => {
       try {
         setLoading(true);
@@ -95,7 +99,7 @@ export default function CategoryGrid({ section, language = 'he' }) {
     };
 
     fetchCategories();
-  }, [categoryGrid.categories, categoryGrid.displayMode, categoryGrid.limit]);
+  }, [section.initialData, categoryGrid.categories, categoryGrid.displayMode, categoryGrid.limit]);
 
   if (loading) {
     return (

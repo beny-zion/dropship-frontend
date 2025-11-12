@@ -21,6 +21,74 @@ async function getHomepageData() {
   }
 }
 
+// Fetch data for a specific section on the server
+async function fetchSectionData(section, language) {
+  try {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+    if (section.type === 'product_carousel') {
+      const { productCarousel } = section.content;
+      let url = `${API_URL}/products?`;
+
+      // Handle different product sources
+      if (productCarousel.productSource === 'manual' && productCarousel.products?.length) {
+        url += `ids=${productCarousel.products.join(',')}&`;
+      } else if (productCarousel.productSource === 'featured') {
+        url += `featured=true&`;
+      } else if (productCarousel.productSource === 'new') {
+        url += `sortBy=createdAt&order=desc&`;
+      } else if (productCarousel.productSource === 'bestseller') {
+        url += `sortBy=salesCount&order=desc&`;
+      } else if (productCarousel.productSource === 'category' && productCarousel.categoryFilter) {
+        url += `category=${productCarousel.categoryFilter}&`;
+      } else if (productCarousel.productSource === 'tag' && productCarousel.tagFilter?.length) {
+        url += `tags=${productCarousel.tagFilter.join(',')}&`;
+      } else if (productCarousel.productSource === 'brand' && productCarousel.brandFilter) {
+        url += `brand=${encodeURIComponent(productCarousel.brandFilter)}&`;
+      }
+
+      url += `limit=${productCarousel.limit || 12}&language=${language}`;
+
+      const response = await fetch(url, { cache: 'no-store', next: { revalidate: 60 } });
+      const data = await response.json();
+      return data.data || [];
+    }
+
+    else if (section.type === 'category_grid') {
+      const { categoryGrid } = section.content;
+      let url = `${API_URL}/categories?`;
+
+      if (categoryGrid.displayMode === 'selected' && categoryGrid.categories?.length) {
+        const categoryIds = categoryGrid.categories.map(cat =>
+          typeof cat === 'string' ? cat : cat._id || cat
+        );
+        url += `ids=${categoryIds.join(',')}&`;
+      } else if (categoryGrid.displayMode === 'featured') {
+        url += `featured=true&`;
+      } else {
+        url += `active=true&`;
+      }
+
+      const response = await fetch(url, { cache: 'no-store', next: { revalidate: 60 } });
+      const data = await response.json();
+      let cats = data.data || [];
+
+      // Filter active and apply limit
+      cats = cats.filter(cat => cat.isActive);
+      if (categoryGrid.limit && categoryGrid.limit > 0) {
+        cats = cats.slice(0, categoryGrid.limit);
+      }
+
+      return cats;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Failed to fetch data for section ${section._id}:`, error);
+    return null;
+  }
+}
+
 export default async function HomePage() {
   // Fetch data on the server
   const { homepage, useCMS } = await getHomepageData();
@@ -31,13 +99,25 @@ export default async function HomePage() {
     const firstSection = sortedSections[0];
     const remainingSections = sortedSections.slice(1);
 
+    // Fetch data for all sections that need it (in parallel for performance)
+    const sectionsWithData = await Promise.all(
+      [firstSection, ...remainingSections].map(async (section) => {
+        if (!section) return null;
+        const data = await fetchSectionData(section, 'he');
+        return { ...section, initialData: data };
+      })
+    );
+
+    const firstSectionWithData = sectionsWithData[0];
+    const remainingSectionsWithData = sectionsWithData.slice(1).filter(Boolean);
+
     return (
       <div className="dynamic-homepage">
         {/* First Section (Hero/Main) */}
-        {firstSection && (
+        {firstSectionWithData && (
           <SectionRenderer
-            key={firstSection._id}
-            section={firstSection}
+            key={firstSectionWithData._id}
+            section={firstSectionWithData}
             language="he"
             preview={false}
           />
@@ -47,7 +127,7 @@ export default async function HomePage() {
         <CategoryCarousel language="he" className="my-8" />
 
         {/* Remaining Sections */}
-        {remainingSections.map((section) => (
+        {remainingSectionsWithData.map((section) => (
           <SectionRenderer
             key={section._id}
             section={section}
