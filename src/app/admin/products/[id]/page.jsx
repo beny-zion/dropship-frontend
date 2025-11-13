@@ -813,11 +813,12 @@ export default function ProductEditPage() {
                     </Label>
                     <Input
                       id="price.ils"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       {...register('price.ils', {
                         required: 'שדה חובה',
-                        min: { value: 0.01, message: 'המחיר חייב להיות חיובי' }
+                        min: { value: 0.01, message: 'המחיר חייב להיות חיובי' },
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
                       })}
                       className={`mt-1 border-2 focus:border-blue-500 transition-colors ${
                         priceIls && parseFloat(priceIls) > 0
@@ -835,9 +836,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="price.usd">מחיר ($)</Label>
                     <Input
                       id="price.usd"
-                      type="number"
-                      step="0.01"
-                      {...register('price.usd')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('price.usd', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1"
                       placeholder="85.00"
                     />
@@ -849,9 +852,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="originalPrice.ils">מחיר מקורי (₪)</Label>
                     <Input
                       id="originalPrice.ils"
-                      type="number"
-                      step="0.01"
-                      {...register('originalPrice.ils')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('originalPrice.ils', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1"
                       placeholder="399.90"
                     />
@@ -864,10 +869,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="discount">אחוז הנחה (%)</Label>
                     <Input
                       id="discount"
-                      type="number"
-                      step="1"
-                      max="100"
-                      {...register('discount')}
+                      type="text"
+                      inputMode="numeric"
+                      {...register('discount', {
+                        validate: value => !value || (/^\d+\.?\d*$/.test(value) && parseFloat(value) <= 100) || 'יש להזין מספר בין 0 ל-100'
+                      })}
                       className="mt-1"
                       placeholder="25"
                     />
@@ -903,9 +909,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="costBreakdown.baseCost.ils">עלות בסיס (₪)</Label>
                     <Input
                       id="costBreakdown.baseCost.ils"
-                      type="number"
-                      step="0.01"
-                      {...register('costBreakdown.baseCost.ils')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('costBreakdown.baseCost.ils', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1 bg-white"
                       placeholder="100.00"
                     />
@@ -918,9 +926,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="costBreakdown.baseCost.usd">עלות בסיס ($)</Label>
                     <Input
                       id="costBreakdown.baseCost.usd"
-                      type="number"
-                      step="0.01"
-                      {...register('costBreakdown.baseCost.usd')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('costBreakdown.baseCost.usd', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1 bg-white"
                       placeholder="28.50"
                     />
@@ -932,9 +942,11 @@ export default function ProductEditPage() {
                   <Label htmlFor="costBreakdown.taxPercent">מע&quot;מ / מס (%)</Label>
                   <Input
                     id="costBreakdown.taxPercent"
-                    type="number"
-                    step="0.1"
-                    {...register('costBreakdown.taxPercent')}
+                    type="text"
+                    inputMode="decimal"
+                    {...register('costBreakdown.taxPercent', {
+                      validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                    })}
                     className="mt-1 bg-white"
                     placeholder="18"
                   />
@@ -949,9 +961,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="costBreakdown.shippingCost.ils">עלות משלוח (₪)</Label>
                     <Input
                       id="costBreakdown.shippingCost.ils"
-                      type="number"
-                      step="0.01"
-                      {...register('costBreakdown.shippingCost.ils')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('costBreakdown.shippingCost.ils', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1 bg-white"
                       placeholder="40.00"
                     />
@@ -961,9 +975,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="costBreakdown.shippingCost.usd">עלות משלוח ($)</Label>
                     <Input
                       id="costBreakdown.shippingCost.usd"
-                      type="number"
-                      step="0.01"
-                      {...register('costBreakdown.shippingCost.usd')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('costBreakdown.shippingCost.usd', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1 bg-white"
                       placeholder="11.50"
                     />
@@ -976,9 +992,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="costBreakdown.additionalFees.ils">עמלות נוספות (₪)</Label>
                     <Input
                       id="costBreakdown.additionalFees.ils"
-                      type="number"
-                      step="0.01"
-                      {...register('costBreakdown.additionalFees.ils')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('costBreakdown.additionalFees.ils', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1 bg-white"
                       placeholder="15.00"
                     />
@@ -991,9 +1009,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="costBreakdown.additionalFees.usd">עמלות נוספות ($)</Label>
                     <Input
                       id="costBreakdown.additionalFees.usd"
-                      type="number"
-                      step="0.01"
-                      {...register('costBreakdown.additionalFees.usd')}
+                      type="text"
+                      inputMode="decimal"
+                      {...register('costBreakdown.additionalFees.usd', {
+                        validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                      })}
                       className="mt-1 bg-white"
                       placeholder="4.30"
                     />
@@ -1048,8 +1068,11 @@ export default function ProductEditPage() {
                       <Label htmlFor="stock.quantity">כמות במלאי</Label>
                       <Input
                         id="stock.quantity"
-                        type="number"
-                        {...register('stock.quantity')}
+                        type="text"
+                        inputMode="numeric"
+                        {...register('stock.quantity', {
+                          validate: value => !value || /^\d+$/.test(value) || 'יש להזין מספר שלם חיובי בלבד'
+                        })}
                         className="mt-1"
                         placeholder="100"
                       />
@@ -1059,8 +1082,11 @@ export default function ProductEditPage() {
                       <Label htmlFor="stock.lowStockThreshold">התראת מלאי נמוך</Label>
                       <Input
                         id="stock.lowStockThreshold"
-                        type="number"
-                        {...register('stock.lowStockThreshold')}
+                        type="text"
+                        inputMode="numeric"
+                        {...register('stock.lowStockThreshold', {
+                          validate: value => !value || /^\d+$/.test(value) || 'יש להזין מספר שלם חיובי בלבד'
+                        })}
                         className="mt-1"
                         placeholder="5"
                       />
@@ -1104,8 +1130,11 @@ export default function ProductEditPage() {
                     <Label htmlFor="shipping.estimatedDays">זמן אספקה משוער (ימים)</Label>
                     <Input
                       id="shipping.estimatedDays"
-                      type="number"
-                      {...register('shipping.estimatedDays')}
+                      type="text"
+                      inputMode="numeric"
+                      {...register('shipping.estimatedDays', {
+                        validate: value => !value || /^\d+$/.test(value) || 'יש להזין מספר שלם חיובי בלבד'
+                      })}
                       className="mt-1"
                       placeholder="14"
                     />
@@ -1116,9 +1145,11 @@ export default function ProductEditPage() {
                       <Label htmlFor="shipping.cost">עלות משלוח לצרכן (₪)</Label>
                       <Input
                         id="shipping.cost"
-                        type="number"
-                        step="0.01"
-                        {...register('shipping.cost')}
+                        type="text"
+                        inputMode="decimal"
+                        {...register('shipping.cost', {
+                          validate: value => !value || /^\d+\.?\d*$/.test(value) || 'יש להזין מספר חיובי בלבד'
+                        })}
                         className="mt-1"
                         placeholder="30.00"
                       />

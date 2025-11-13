@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Plus, Trash2, Copy, Image as ImageIcon, Wand2 } from 'lucide-react';
 
 export default function VariantManager({ variants = [], onChange }) {
-  const [editingIndex, setEditingIndex] = useState(null);
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [bulkColors, setBulkColors] = useState('');
   const [bulkSizes, setBulkSizes] = useState('');
@@ -29,7 +28,6 @@ export default function VariantManager({ variants = [], onChange }) {
       weight: ''
     };
     onChange([...variants, newVariant]);
-    setEditingIndex(variants.length);
   };
 
   const handleDuplicateVariant = (index) => {
@@ -266,26 +264,30 @@ export default function VariantManager({ variants = [], onChange }) {
             </button>
           )}
         </div>
-        {isExpanded && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowBulkAdd(!showBulkAdd)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-            >
-              <Wand2 className="w-4 h-4" />
-              הוספה מהירה
-            </button>
-            <button
-              type="button"
-              onClick={handleAddVariant}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              <Plus className="w-4 h-4" />
-              הוסף ידני
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setShowBulkAdd(!showBulkAdd);
+              if (!isExpanded) setIsExpanded(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          >
+            <Wand2 className="w-4 h-4" />
+            הוספה מהירה
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              handleAddVariant();
+              if (!isExpanded) setIsExpanded(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-4 h-4" />
+            הוסף ידני
+          </button>
+        </div>
       </div>
 
       {/* הסבר על תמונות */}
@@ -421,25 +423,7 @@ export default function VariantManager({ variants = [], onChange }) {
       {variants.length === 0 ? (
         <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
           <p className="text-gray-500">אין ווריאנטים עדיין</p>
-          <p className="text-sm text-gray-400 mt-2">לחץ על כפתור &quot;+&quot; כדי להוסיף</p>
-          <div className="mt-4 flex justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowBulkAdd(!showBulkAdd)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-            >
-              <Wand2 className="w-4 h-4" />
-              הוספה מהירה
-            </button>
-            <button
-              type="button"
-              onClick={handleAddVariant}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              <Plus className="w-4 h-4" />
-              הוסף ידני
-            </button>
-          </div>
+          <p className="text-sm text-gray-400 mt-2">לחץ על אחד הכפתורים למעלה כדי להוסיף ווריאנטים</p>
         </div>
       ) : isExpanded ? (
         <div className="space-y-4">
