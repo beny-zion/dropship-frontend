@@ -254,7 +254,7 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
             <p className="text-xs text-gray-500 mt-1">
               {displayMode === 'all'
                 ? 'יציג את כל הקטגוריות הפעילות במערכת'
-                : 'בחר קטגוריות ספציפיות להצגה'
+                : 'בחר קטגוריות ספציפיות להצגה - סדר הבחירה הוא סדר התצוגה'
               }
             </p>
           </div>
@@ -267,26 +267,45 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
                 selectedCategoryIds={categoryGrid.categories || []}
                 onChange={(selectedIds) => updateContent('content.categoryGrid.categories', selectedIds)}
               />
+              {/* Selected Count Indicator */}
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-900">
+                    קטגוריות שיוצגו למשתמשים:
+                  </span>
+                  <span className="text-lg font-bold text-blue-600">
+                    {categoryGrid.categories?.length || 0}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-700 mt-1">
+                  {categoryGrid.categories?.length > 0
+                    ? 'הקטגוריות יופיעו בסדר שבחרת אותן'
+                    : 'בחר קטגוריות כדי להתחיל'
+                  }
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Limit Field */}
-          <div>
-            <Label>מקסימום קטגוריות להצגה</Label>
-            <Input
-              type="number"
-              min="0"
-              max="20"
-              value={categoryGrid.limit || 0}
-              onChange={(e) => updateContent('content.categoryGrid.limit', parseInt(e.target.value))}
-              placeholder="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              כמה קטגוריות להציג מתוך {displayMode === 'selected' ? 'הקטגוריות הנבחרות' : 'כל הקטגוריות'}.
-              <br />
-              0 = ללא הגבלה (הצג הכל)
-            </p>
-          </div>
+          {/* Limit Field - Only show when displayMode is 'all' */}
+          {displayMode === 'all' && (
+            <div>
+              <Label>מקסימום קטגוריות להצגה</Label>
+              <Input
+                type="number"
+                min="0"
+                max="20"
+                value={categoryGrid.limit || 0}
+                onChange={(e) => updateContent('content.categoryGrid.limit', parseInt(e.target.value))}
+                placeholder="0"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                כמה קטגוריות להציג מתוך כל הקטגוריות הפעילות.
+                <br />
+                0 = ללא הגבלה (הצג הכל)
+              </p>
+            </div>
+          )}
         </div>
 
         <Separator />

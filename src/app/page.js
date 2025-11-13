@@ -6,7 +6,7 @@ import { getActiveHomePage } from '@/lib/api/homepage';
 
 // This is a Server Component - it fetches data at build/request time
 export const dynamic = 'force-dynamic'; // Always fetch fresh data
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 10; // Revalidate every 10 seconds (faster updates for admin changes)
 
 async function getHomepageData() {
   try {
@@ -49,7 +49,7 @@ async function fetchSectionData(section, language) {
 
       url += `limit=${productCarousel.limit || 12}&language=${language}`;
 
-      const response = await fetch(url, { cache: 'no-store', next: { revalidate: 60 } });
+      const response = await fetch(url, { cache: 'no-store', next: { revalidate: 10 } });
       const data = await response.json();
       return data.data || [];
     }
@@ -63,17 +63,30 @@ async function fetchSectionData(section, language) {
           typeof cat === 'string' ? cat : cat._id || cat
         );
         url += `ids=${categoryIds.join(',')}&`;
+
+        const response = await fetch(url, { cache: 'no-store', next: { revalidate: 10 } });
+        const data = await response.json();
+        let cats = data.data || [];
+
+        // ⚡ Sort categories by the order in categoryGrid.categories
+        // This ensures the display order matches the admin's selection order
+        cats = categoryIds
+          .map(id => cats.find(cat => cat._id === id))
+          .filter(Boolean) // Remove any undefined (categories not found)
+          .filter(cat => cat.isActive); // Only active categories
+
+        return cats;
       } else if (categoryGrid.displayMode === 'featured') {
         url += `featured=true&`;
       } else {
         url += `active=true&`;
       }
 
-      const response = await fetch(url, { cache: 'no-store', next: { revalidate: 60 } });
+      const response = await fetch(url, { cache: 'no-store', next: { revalidate: 10 } });
       const data = await response.json();
       let cats = data.data || [];
 
-      // Filter active and apply limit
+      // Filter active and apply limit (for 'all' and 'featured' modes)
       cats = cats.filter(cat => cat.isActive);
       if (categoryGrid.limit && categoryGrid.limit > 0) {
         cats = cats.slice(0, categoryGrid.limit);

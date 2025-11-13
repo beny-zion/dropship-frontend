@@ -230,7 +230,7 @@ function MinimalProductCard({ product, language }) {
           <img
             src={imageUrl}
             alt={name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
 
           {/* Text at Bottom - Always Visible */}

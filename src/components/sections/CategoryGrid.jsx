@@ -41,13 +41,12 @@ export default function CategoryGrid({ section, language = 'he' }) {
           const data = await response.json();
           let cats = data.data || [];
 
-          // Filter only active categories
-          cats = cats.filter(cat => cat.isActive);
-
-          // Apply limit if specified
-          if (categoryGrid.limit && categoryGrid.limit > 0) {
-            cats = cats.slice(0, categoryGrid.limit);
-          }
+          // ⚡ Sort categories by the order in categoryGrid.categories
+          // This ensures the display order matches the admin's selection order
+          cats = categoryIds
+            .map(id => cats.find(cat => cat._id === id))
+            .filter(Boolean) // Remove any undefined (categories not found)
+            .filter(cat => cat.isActive); // Only active categories
 
           setCategories(cats);
         }
