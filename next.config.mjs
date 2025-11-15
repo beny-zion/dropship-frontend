@@ -20,6 +20,10 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '**.scene7.com',
+      },
+      {
+        protocol: 'https',
         hostname: '**.s5a.com',
       },
       {
