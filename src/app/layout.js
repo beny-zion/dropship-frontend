@@ -1,6 +1,5 @@
 import { Providers } from '@/components/Providers';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
+import ConditionalLayout from '@/components/ConditionalLayout';
 import ConsentBanner from '@/components/shared/ConsentBanner';
 import './globals.css';
 
@@ -22,9 +21,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className="flex flex-col min-h-screen">
         <Providers>
-          <Header />
-          <main className="flex-grow">{children}</main>
-          <Footer />
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
           <ConsentBanner />
         </Providers>
       </body>

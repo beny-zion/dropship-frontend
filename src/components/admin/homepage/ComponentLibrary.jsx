@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { createEmptySection } from '@/lib/api/homepage';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Image, Grid3x3, Package, Megaphone, Code, AlignLeft, Video, ImageIcon } from 'lucide-react';
+import { Image, Grid3x3, Package, Megaphone, Code, ImageIcon } from 'lucide-react';
 
 const COMPONENT_TYPES = [
   {
@@ -58,36 +57,33 @@ export default function ComponentLibrary({ onAddSection }) {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-1">ספריית קומפוננטות</h2>
-        <p className="text-sm text-muted-foreground">
-          גרור או לחץ להוספת section לדף
+    <div className="p-1.5 sm:p-2 md:p-2.5 lg:p-3 xl:p-4">
+      <div className="mb-1.5 sm:mb-2 md:mb-2.5 lg:mb-3">
+        <h2 className="text-[10px] sm:text-xs lg:text-sm xl:text-base font-semibold mb-0.5">קומפוננטות</h2>
+        <p className="text-[9px] sm:text-[10px] lg:text-xs text-muted-foreground">
+          לחץ להוספה
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-1 sm:space-y-1.5 lg:space-y-2">
         {COMPONENT_TYPES.map((component) => {
           const Icon = component.icon;
           return (
             <Card
               key={component.type}
-              className={`p-4 cursor-pointer transition-all hover:shadow-md border-2 ${
+              className={`p-1 sm:p-1.5 lg:p-2 xl:p-2.5 cursor-pointer transition-all hover:shadow-md border ${
                 hoveredType === component.type ? component.color : 'border-gray-200'
               }`}
               onMouseEnter={() => setHoveredType(component.type)}
               onMouseLeave={() => setHoveredType(null)}
               onClick={() => handleAddComponent(component.type)}
             >
-              <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-lg ${component.color}`}>
-                  <Icon className="h-5 w-5" />
+              <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
+                <div className={`p-0.5 sm:p-1 lg:p-1.5 rounded ${component.color}`}>
+                  <Icon className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 xl:h-4 xl:w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm mb-1">{component.name}</h3>
-                  <p className="text-xs text-muted-foreground leading-tight">
-                    {component.description}
-                  </p>
+                  <h3 className="font-medium text-[9px] sm:text-[10px] md:text-xs xl:text-sm truncate">{component.name}</h3>
                 </div>
               </div>
             </Card>
@@ -95,10 +91,9 @@ export default function ComponentLibrary({ onAddSection }) {
         })}
       </div>
 
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 className="text-sm font-medium text-blue-900 mb-2">💡 טיפ</h3>
-        <p className="text-xs text-blue-700 leading-relaxed">
-          לחץ על component כדי להוסיף אותו לדף. לאחר מכן תוכל לערוך אותו בפאנל הימני.
+      <div className="mt-1.5 sm:mt-2 md:mt-2.5 lg:mt-3 p-1 sm:p-1.5 lg:p-2 bg-blue-50 rounded border border-blue-200">
+        <p className="text-[9px] sm:text-[10px] lg:text-xs text-blue-700 leading-tight">
+          💡 לחץ על קומפוננטה
         </p>
       </div>
     </div>

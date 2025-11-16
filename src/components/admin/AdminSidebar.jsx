@@ -14,6 +14,7 @@ import {
   Home
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
 
 const navItems = [
   {
@@ -51,14 +52,25 @@ const navItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { logout, user } = useAuth();
+  const { isSidebarOpen, closeSidebar } = useAdminSidebar();
 
   return (
     <>
       {/* Mobile Sidebar Backdrop */}
-      <div className="lg:hidden fixed inset-0 bg-gray-900/50 z-40 hidden" id="sidebar-backdrop"></div>
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-gray-900/50 z-40 transition-opacity duration-300"
+          onClick={closeSidebar}
+        ></div>
+      )}
 
       {/* Sidebar */}
-      <aside className="fixed top-0 right-0 h-full w-64 bg-white border-l border-gray-200 z-50 transform lg:translate-x-0 transition-transform duration-300">
+      <aside className={`
+        fixed top-0 right-0 h-full w-64 bg-white border-l border-gray-200 z-50
+        transform transition-transform duration-300 ease-in-out
+        lg:translate-x-0
+        ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+      `}>
         {/* Logo */}
         <div className="h-16 flex items-center justify-center border-b border-gray-200">
           <h1 className="text-xl font-bold text-blue-600">
@@ -94,10 +106,11 @@ export default function AdminSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => closeSidebar()}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                  ${isActive 
-                    ? 'bg-blue-50 text-blue-600 font-medium' 
+                  ${isActive
+                    ? 'bg-blue-50 text-blue-600 font-medium'
                     : 'text-gray-700 hover:bg-gray-50'
                   }
                 `}

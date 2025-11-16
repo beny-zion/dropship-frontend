@@ -30,6 +30,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'image.s5a.com',
       },
+      {
+        protocol: 'https',
+        hostname: '**.scene7.com',
+      },
     ],
     // אפשר כל דומיין חיצוני (לא מומלץ לפרודקשן, רק לפיתוח)
     unoptimized: false,

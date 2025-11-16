@@ -148,58 +148,63 @@ export default function HomePageEditorPage() {
   if (!homepage) return <div>דף בית לא נמצא</div>;
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Top Bar */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => router.push('/admin/homepage')}
+            className="flex-shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-xl font-bold">{homepage.name}</h1>
-            <p className="text-sm text-muted-foreground">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-bold truncate">{homepage.name}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {homepage.sections.length} sections
             </p>
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-1 sm:gap-2 flex-shrink-0">
           <Button
             variant="outline"
             onClick={() => setPreviewMode(!previewMode)}
-            className="gap-2"
+            className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4"
+            size="sm"
           >
-            <Eye className="h-4 w-4" />
-            {previewMode ? 'מצב עריכה' : 'תצוגה מקדימה'}
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">{previewMode ? 'מצב עריכה' : 'תצוגה מקדימה'}</span>
+            <span className="sm:hidden">{previewMode ? 'ערוך' : 'תצוגה'}</span>
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="gap-2"
+            className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4"
+            size="sm"
           >
-            <Save className="h-4 w-4" />
-            {saving ? 'שומר...' : 'שמור שינויים'}
+            <Save className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">{saving ? 'שומר...' : 'שמור שינויים'}</span>
+            <span className="sm:hidden">{saving ? '...' : 'שמור'}</span>
           </Button>
         </div>
       </div>
 
       {/* Editor Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Component Library */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Sidebar - Component Library (Show from sm screens) */}
         {!previewMode && (
-          <div className="w-80 border-r bg-white overflow-y-auto">
+          <div className="hidden sm:block w-40 md:w-44 lg:w-48 xl:w-56 2xl:w-64 border-r bg-white overflow-y-auto flex-shrink-0">
             <ComponentLibrary onAddSection={handleAddSection} />
           </div>
         )}
 
         {/* Main Editor Area */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          <div className="max-w-7xl mx-auto">
-            <Card className="bg-white p-1">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-1 sm:p-2 md:p-3 lg:p-4">
+          <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto">
+            <Card className="bg-white p-0.5 sm:p-1">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -210,9 +215,9 @@ export default function HomePageEditorPage() {
                   strategy={verticalListSortingStrategy}
                 >
                   {homepage.sections.length === 0 ? (
-                    <div className="text-center py-20 text-muted-foreground">
-                      <p className="text-lg mb-2">דף הבית ריק</p>
-                      <p className="text-sm">התחל להוסיף sections מהספרייה בצד שמאל</p>
+                    <div className="text-center py-6 sm:py-8 md:py-10 text-muted-foreground px-2 sm:px-4">
+                      <p className="text-xs sm:text-sm mb-0.5 sm:mb-1">דף הבית ריק</p>
+                      <p className="text-[10px] sm:text-xs">התחל להוסיף sections</p>
                     </div>
                   ) : (
                     homepage.sections.map((section) => (
@@ -232,15 +237,24 @@ export default function HomePageEditorPage() {
           </div>
         </div>
 
-        {/* Right Sidebar - Properties Panel */}
+        {/* Right Sidebar - Properties Panel (Overlay on very small screens, sidebar on larger) */}
         {!previewMode && selectedSection && (
-          <div className="w-96 border-l bg-white overflow-y-auto">
-            <PropertiesPanel
-              section={selectedSection}
-              onUpdate={handleUpdateSection}
-              onClose={() => setSelectedSection(null)}
+          <>
+            {/* Backdrop for mobile only */}
+            <div
+              className="sm:hidden fixed inset-0 bg-black/50 z-20"
+              onClick={() => setSelectedSection(null)}
             />
-          </div>
+
+            {/* Properties Panel */}
+            <div className="fixed sm:relative inset-y-0 left-0 w-full sm:w-56 md:w-64 lg:w-72 xl:w-80 2xl:w-96 border-l bg-white overflow-y-auto z-30 sm:z-auto flex-shrink-0">
+              <PropertiesPanel
+                section={selectedSection}
+                onUpdate={handleUpdateSection}
+                onClose={() => setSelectedSection(null)}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>

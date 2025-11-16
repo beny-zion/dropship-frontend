@@ -5,6 +5,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { AdminSidebarProvider } from '@/contexts/AdminSidebarContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 
@@ -32,22 +33,24 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* Sidebar */}
-      <AdminSidebar />
+    <AdminSidebarProvider>
+      <div className="min-h-screen bg-gray-50" dir="rtl">
+        {/* Sidebar */}
+        <AdminSidebar />
 
-      {/* Main Content */}
-      <div className="lg:mr-64">
-        {/* Header */}
-        <AdminHeader />
+        {/* Main Content */}
+        <div className="lg:mr-64 min-h-screen">
+          {/* Header */}
+          <AdminHeader />
 
-        {/* Page Content */}
-        <main className="p-6">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
-        </main>
+          {/* Page Content */}
+          <main className="p-4 sm:p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </AdminSidebarProvider>
   );
 }

@@ -130,19 +130,19 @@ export default function HomePageManagementPage() {
   if (loading) return <Loading />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">ניהול דף הבית</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">ניהול דף הבית</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             נהל ועצב את דף הבית באופן דינמי
           </p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               דף בית חדש
             </Button>
@@ -247,21 +247,21 @@ export default function HomePageManagementPage() {
       {/* HomePage List */}
       <div className="grid gap-4">
         {homepages.map((homepage) => (
-          <Card key={homepage._id} className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-xl font-semibold">{homepage.name}</h3>
+          <Card key={homepage._id} className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                  <h3 className="text-lg sm:text-xl font-semibold truncate">{homepage.name}</h3>
                   {homepage.isActive && (
-                    <Badge className="bg-green-500">פעיל</Badge>
+                    <Badge className="bg-green-500 flex-shrink-0">פעיל</Badge>
                   )}
-                  <Badge variant="outline">{
+                  <Badge variant="outline" className="flex-shrink-0">{
                     homepage.language === 'both' ? 'עב/אנג' :
                     homepage.language === 'he' ? 'עברית' : 'אנגלית'
                   }</Badge>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                   <div>
                     <span className="font-medium">Sections:</span>{' '}
                     {homepage.sections?.length || 0}
@@ -281,12 +281,13 @@ export default function HomePageManagementPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 justify-end lg:justify-start">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => handleToggle(homepage._id)}
                   title={homepage.isActive ? 'השבת' : 'הפעל'}
+                  className="flex-shrink-0"
                 >
                   {homepage.isActive ? (
                     <EyeOff className="h-4 w-4" />
@@ -300,6 +301,7 @@ export default function HomePageManagementPage() {
                   size="icon"
                   onClick={() => router.push(`/admin/homepage/${homepage._id}/stats`)}
                   title="סטטיסטיקות"
+                  className="flex-shrink-0"
                 >
                   <BarChart3 className="h-4 w-4" />
                 </Button>
@@ -309,6 +311,7 @@ export default function HomePageManagementPage() {
                   size="icon"
                   onClick={() => openCloneDialog(homepage)}
                   title="שכפל"
+                  className="flex-shrink-0"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -318,6 +321,7 @@ export default function HomePageManagementPage() {
                   size="icon"
                   onClick={() => router.push(`/admin/homepage/${homepage._id}/edit`)}
                   title="ערוך"
+                  className="flex-shrink-0"
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -328,6 +332,7 @@ export default function HomePageManagementPage() {
                   onClick={() => handleDelete(homepage._id, homepage.name)}
                   disabled={homepage.isActive}
                   title={homepage.isActive ? 'לא ניתן למחוק דף פעיל' : 'מחק'}
+                  className="flex-shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

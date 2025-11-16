@@ -53,15 +53,15 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
     const enText = heroBanner.text?.en || {};
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* GUESS Typography Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800" dir="rtl">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm text-blue-800" dir="rtl">
           <p className="font-semibold mb-1">💡 סגנון טיפוגרפיה GUESS</p>
           <p className="text-xs">הטקסטים מעוצבים אוטומטית בסגנון GUESS עם פונטים דינמיים ו-letter-spacing מותאם</p>
         </div>
 
         <Tabs defaultValue="he" dir="rtl">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 text-xs sm:text-sm">
             <TabsTrigger value="he">עברית</TabsTrigger>
             <TabsTrigger value="en">English</TabsTrigger>
           </TabsList>
@@ -199,15 +199,15 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
     const displayMode = categoryGrid.displayMode || 'all';
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* GUESS Typography Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800" dir="rtl">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm text-blue-800" dir="rtl">
           <p className="font-semibold mb-1">💡 סגנון עיצוב מחודש</p>
           <p className="text-xs">הקטגוריות מוצגות בגריד 2 עמודות עם כרטיסים יפים בסגנון GUESS. הכותרת והטקסט מעוצבים אוטומטית.</p>
         </div>
 
         <Tabs defaultValue="he" dir="rtl">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 text-xs sm:text-sm">
             <TabsTrigger value="he">עברית</TabsTrigger>
             <TabsTrigger value="en">English</TabsTrigger>
           </TabsList>
@@ -356,15 +356,15 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
     const carousel = editedSection.content?.productCarousel || {};
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* GUESS Typography Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800" dir="rtl">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm text-blue-800" dir="rtl">
           <p className="font-semibold mb-1">💡 סגנון טיפוגרפיה GUESS</p>
           <p className="text-xs">הכותרת ושמות המוצרים מעוצבים אוטומטית בסגנון GUESS עם אפקט overlay מקצועי</p>
         </div>
 
         <Tabs defaultValue="he" dir="rtl">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 text-xs sm:text-sm">
             <TabsTrigger value="he">עברית</TabsTrigger>
             <TabsTrigger value="en">English</TabsTrigger>
           </TabsList>
@@ -427,9 +427,9 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
     const heroImage = editedSection.content?.heroImage || {};
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Info Box */}
-        <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3 text-sm text-cyan-800" dir="rtl">
+        <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm text-cyan-800" dir="rtl">
           <p className="font-semibold mb-1">📸 תמונת Hero רספונסיבית</p>
           <p className="text-xs">תמונה נקייה ללא טקסט או כפתורים. העלה 2 תמונות בגדלים מותאמים למסכים שונים</p>
         </div>
@@ -523,15 +523,15 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
     const heText = banner.text?.he || {};
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* GUESS Typography Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800" dir="rtl">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm text-blue-800" dir="rtl">
           <p className="font-semibold mb-1">💡 סגנון טיפוגרפיה GUESS</p>
           <p className="text-xs">הטקסטים והכפתורים מעוצבים אוטומטית בסגנון GUESS עם אפקט shadow וכפתורים מעוצבים</p>
         </div>
 
         <Tabs defaultValue="he" dir="rtl">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 text-xs sm:text-sm">
             <TabsTrigger value="he">עברית</TabsTrigger>
             <TabsTrigger value="en">English</TabsTrigger>
           </TabsList>
@@ -625,19 +625,19 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between bg-white">
-        <h2 className="font-semibold">עריכת Section</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+      <div className="p-3 sm:p-4 border-b flex items-center justify-between bg-white sticky top-0 z-10">
+        <h2 className="text-sm sm:text-base font-semibold">עריכת Section</h2>
+        <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
           <X className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4">
         {/* General Settings */}
-        <div className="space-y-4 mb-6">
+        <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
           <div className="flex items-center justify-between">
-            <Label>פעיל</Label>
+            <Label className="text-sm">פעיל</Label>
             <Switch
               checked={editedSection.isActive}
               onCheckedChange={(checked) => setEditedSection({ ...editedSection, isActive: checked })}
@@ -645,7 +645,7 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
           </div>
         </div>
 
-        <Separator className="my-6" />
+        <Separator className="my-4 sm:my-6" />
 
         {/* Type-specific editors */}
         {section.type === 'hero_image' && renderHeroImageEditor()}
@@ -656,8 +656,8 @@ export default function PropertiesPanel({ section, onUpdate, onClose }) {
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t bg-white">
-        <Button onClick={handleSave} className="w-full gap-2" disabled={saving}>
+      <div className="p-3 sm:p-4 border-t bg-white sticky bottom-0">
+        <Button onClick={handleSave} className="w-full gap-2 text-sm" disabled={saving} size="sm">
           <Save className="h-4 w-4" />
           {saving ? 'שומר...' : 'שמור שינויים'}
         </Button>

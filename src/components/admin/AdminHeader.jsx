@@ -4,21 +4,19 @@
 
 import { Bell, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
 
 export default function AdminHeader() {
+  const { toggleSidebar } = useAdminSidebar();
+
   return (
     <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div className="h-full px-6 flex items-center justify-between">
+      <div className="h-full px-4 sm:px-6 flex items-center justify-between">
         {/* Mobile Menu Button */}
-        <button 
-          className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-          onClick={() => {
-            // Toggle mobile sidebar
-            const sidebar = document.querySelector('aside');
-            const backdrop = document.getElementById('sidebar-backdrop');
-            sidebar?.classList.toggle('-translate-x-full');
-            backdrop?.classList.toggle('hidden');
-          }}
+        <button
+          className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          onClick={toggleSidebar}
+          aria-label="Toggle menu"
         >
           <Menu className="w-6 h-6" />
         </button>

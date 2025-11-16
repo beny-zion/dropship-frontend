@@ -120,11 +120,11 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Title */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">לוח בקרה</h1>
-        <p className="text-gray-600 mt-1">סקירה כללית של המערכת</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">לוח בקרה</h1>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">סקירה כללית של המערכת</p>
       </div>
 
       {/* Alerts */}
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
         <StatsCard
           title="סה״כ מוצרים"
           value={overview.totalProducts || 0}
@@ -184,23 +184,23 @@ export default function AdminDashboard() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
         {/* Sales Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold mb-4">מכירות - 7 ימים אחרונים</h2>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-4">מכירות - 7 ימים אחרונים</h2>
           <SalesChart data={salesData?.data || []} />
         </div>
 
         {/* Top Products */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold mb-4">מוצרים מובילים</h2>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-4">מוצרים מובילים</h2>
           <TopProducts products={topProducts?.data || []} />
         </div>
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold mb-4">הזמנות אחרונות</h2>
+      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-semibold mb-4">הזמנות אחרונות</h2>
         <RecentOrders orders={recentOrders?.data || []} />
       </div>
     </div>
