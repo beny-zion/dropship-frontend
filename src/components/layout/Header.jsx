@@ -19,19 +19,28 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    let lastScrollY = window.scrollY;
+    let ticking = false;
+    const SHRINK_THRESHOLD = 80; // Scroll down threshold
+    const EXPAND_THRESHOLD = 40; // Scroll up threshold - creates hysteresis
 
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
 
-      // If scrolled down more than 50px, shrink the header
-      if (currentScrollY > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
+          // Use hysteresis: different thresholds for shrinking vs expanding
+          if (currentScrollY > SHRINK_THRESHOLD) {
+            setIsScrolled(true);
+          } else if (currentScrollY < EXPAND_THRESHOLD) {
+            setIsScrolled(false);
+          }
+          // Between EXPAND_THRESHOLD and SHRINK_THRESHOLD: maintain current state
+
+          ticking = false;
+        });
+
+        ticking = true;
       }
-
-      lastScrollY = currentScrollY;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -55,9 +64,10 @@ export default function Header() {
   return (
     <>
       <header
-        className={`border-b border-neutral-200 bg-white sticky top-0 z-50 transition-all duration-300 ${
+        className={`border-b border-neutral-200 bg-white sticky top-0 z-50 transition-all duration-300 will-change-transform ${
           isScrolled ? 'py-2 shadow-md' : 'py-5'
         }`}
+        style={{ transform: 'translateZ(0)' }}
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
@@ -171,9 +181,12 @@ export default function Header() {
 
       {/* Mobile Menu */}
       <div
-        className={`fixed top-[73px] right-0 w-64 h-full bg-white shadow-xl z-40 transform transition-transform duration-300 md:hidden ${
+        className={`fixed right-0 w-64 h-full bg-white shadow-xl z-40 transform transition-transform duration-300 md:hidden ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        style={{
+          top: isScrolled ? 'calc(2rem + 2.5rem)' : 'calc(2.5rem + 3.125rem)' // Matches header height dynamically
+        }}
       >
         <nav className="flex flex-col p-6 gap-4">
           <Link
