@@ -161,30 +161,57 @@ export default async function HomePage() {
       {/* Categories Section */}
       <CategoryGrid />
 
-      {/* Features Section - Static, no need for client component */}
-      <div className="container mx-auto px-4 py-16">
+      {/* Features Section - TORINO Brand Values */}
+      <div className="container mx-auto px-4 py-16 bg-gradient-to-br from-gray-50 to-white">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-light tracking-wide mb-4" style={{ letterSpacing: '0.15em' }}>
+            למה TORINO?
+          </h2>
+          <p className="text-gray-600 text-lg font-light">
+            חוויית אופנה יוקרתית עם שירות ברמה עולמית
+          </p>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-8">
-          <div className="p-8 border rounded-2xl shadow-sm hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white">
-            <div className="text-5xl mb-4">🚚</div>
-            <h3 className="text-2xl font-bold mb-3">משלוח עד הבית</h3>
-            <p className="text-gray-600 text-lg">
-              אנחנו דואגים להכל - המוצר יגיע ישירות לפתח ביתך
+          <div className="p-8 border border-gray-200 rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 bg-white group">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-black flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-light mb-3 text-center tracking-wide" style={{ letterSpacing: '0.1em' }}>
+              יבוא אישי
+            </h3>
+            <p className="text-gray-600 text-base text-center leading-relaxed">
+              מותגי אופנה יוקרתיים מכל רחבי העולם ישירות אליך
             </p>
           </div>
 
-          <div className="p-8 border rounded-2xl shadow-sm hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white">
-            <div className="text-5xl mb-4">💰</div>
-            <h3 className="text-2xl font-bold mb-3">מחירים משתלמים</h3>
-            <p className="text-gray-600 text-lg">
-              מחירים טובים יותר מהחנויות בישראל, ללא מאמץ
+          <div className="p-8 border border-gray-200 rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 bg-white group">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-black flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-light mb-3 text-center tracking-wide" style={{ letterSpacing: '0.1em' }}>
+              איכות פרמיום
+            </h3>
+            <p className="text-gray-600 text-base text-center leading-relaxed">
+              רק מוצרים מקוריים ממותגים מובילים בעולם האופנה
             </p>
           </div>
 
-          <div className="p-8 border rounded-2xl shadow-sm hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white">
-            <div className="text-5xl mb-4">✅</div>
-            <h3 className="text-2xl font-bold mb-3">מוצרים מובחרים</h3>
-            <p className="text-gray-600 text-lg">
-              רק מוצרים איכותיים עם ביקורות מעולות
+          <div className="p-8 border border-gray-200 rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 bg-white group">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-black flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-light mb-3 text-center tracking-wide" style={{ letterSpacing: '0.1em' }}>
+              שירות VIP
+            </h3>
+            <p className="text-gray-600 text-base text-center leading-relaxed">
+              ליווי אישי והתאמה מושלמת לסטייל שלך
             </p>
           </div>
         </div>

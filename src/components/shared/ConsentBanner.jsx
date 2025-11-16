@@ -45,7 +45,7 @@ export default function ConsentBanner() {
               פרטיות ושימוש במידע
             </h3>
             <p className="text-sm font-light leading-relaxed text-neutral-300">
-              אנו משתמשים ב-localStorage לשמירת מידע התחברות ולשיפור חוויית המשתמש שלך.
+              אנו משתמשים ב-Cookies מאובטחים לשמירת מידע התחברות וב-localStorage לשיפור חוויית המשתמש שלך.
               המידע נשמר במכשיר שלך בלבד ואינו משותף עם צדדים שלישיים. המשך השימוש באתר מהווה הסכמה ל
               <Link href="/privacy" className="text-white underline underline-offset-4 hover:text-neutral-400 transition-colors mx-1">
                 מדיניות הפרטיות
@@ -89,10 +89,16 @@ export default function ConsentBanner() {
           <summary className="text-xs font-light tracking-wide text-neutral-500 cursor-pointer hover:text-neutral-400 transition-colors">
             מה בדיוק אנחנו שומרים? (לחץ לפרטים)
           </summary>
-          <div className="mt-4 space-y-2 text-xs font-light text-neutral-400">
-            <p>• <strong className="text-neutral-300 font-normal">token</strong> - מזהה התחברות מאובטח (JWT) לשמירת הסשן שלך</p>
-            <p>• <strong className="text-neutral-300 font-normal">user</strong> - מידע בסיסי כמו שם ואימייל להצגה באתר</p>
-            <p>• <strong className="text-neutral-300 font-normal">privacy-consent</strong> - סימון שאישרת את מדיניות הפרטיות</p>
+          <div className="mt-4 space-y-3 text-xs font-light text-neutral-400">
+            <div>
+              <p className="text-neutral-300 font-normal mb-2">Cookies מאובטחים (HttpOnly):</p>
+              <p className="mr-4">• <strong className="text-neutral-300 font-normal">auth-token</strong> - מזהה התחברות מאובטח (JWT) לשמירת הסשן שלך</p>
+            </div>
+            <div>
+              <p className="text-neutral-300 font-normal mb-2">localStorage:</p>
+              <p className="mr-4">• <strong className="text-neutral-300 font-normal">privacy-consent</strong> - סימון שאישרת את מדיניות הפרטיות</p>
+              <p className="mr-4">• <strong className="text-neutral-300 font-normal">privacy-consent-date</strong> - תאריך ההסכמה למדיניות</p>
+            </div>
             <p className="mt-3 text-neutral-500">
               כל המידע הזה נשמר במכשיר שלך בלבד ואינו נשלח לשרתים חיצוניים.
               תוכל למחוק אותו בכל עת דרך הגדרות הדפדפן או על ידי התנתקות מהאתר.

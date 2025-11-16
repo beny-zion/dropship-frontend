@@ -46,9 +46,11 @@ export default function CategoryGrid() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-4xl font-bold mb-4">קטגוריות פופולריות</h2>
-        <p className="text-gray-600 text-lg">
-          גלה את המוצרים הטובים ביותר בכל קטגוריה
+        <h2 className="text-4xl font-light tracking-wide mb-4" style={{ letterSpacing: '0.15em' }}>
+          גלה את הקולקציות
+        </h2>
+        <p className="text-gray-600 text-lg font-light">
+          מותגי אופנה יוקרתיים בקטגוריות מגוונות
         </p>
       </motion.div>
 
