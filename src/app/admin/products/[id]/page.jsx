@@ -623,6 +623,7 @@ export default function ProductEditPage() {
               <Controller
                 name="images"
                 control={control}
+                defaultValue={[]}
                 render={({ field }) => (
                   <ImageUpload
                     images={field.value || []}

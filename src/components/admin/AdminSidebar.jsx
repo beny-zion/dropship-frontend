@@ -11,7 +11,8 @@ import {
   Users,
   LogOut,
   Folder,
-  Home
+  Home,
+  Image
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
@@ -46,6 +47,11 @@ const navItems = [
     name: 'משתמשים',
     href: '/admin/users',
     icon: Users
+  },
+  {
+    name: 'ניהול מדיה',
+    href: '/admin/media',
+    icon: Image
   }
 ];
 
@@ -68,18 +74,18 @@ export default function AdminSidebar() {
       <aside className={`
         fixed top-0 right-0 h-full w-64 bg-white border-l border-gray-200 z-50
         transform transition-transform duration-300 ease-in-out
-        lg:translate-x-0
+        lg:translate-x-0 flex flex-col
         ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
       `}>
         {/* Logo */}
-        <div className="h-16 flex items-center justify-center border-b border-gray-200">
+        <div className="h-16 flex items-center justify-center border-b border-gray-200 flex-shrink-0">
           <h1 className="text-xl font-bold text-blue-600">
             Admin Panel
           </h1>
         </div>
 
         {/* User Info */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
               {user?.firstName?.[0]}{user?.lastName?.[0]}
@@ -95,10 +101,10 @@ export default function AdminSidebar() {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-4 space-y-1">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || 
+            const isActive = pathname === item.href ||
                            (item.href !== '/admin' && pathname?.startsWith(item.href));
             const Icon = item.icon;
 
@@ -115,20 +121,20 @@ export default function AdminSidebar() {
                   }
                 `}
               >
-                <Icon className="w-5 h-5" />
-                <span>{item.name}</span>
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span className="truncate">{item.name}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
           <button
             onClick={logout}
             className="flex items-center gap-3 px-4 py-3 w-full text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5 flex-shrink-0" />
             <span>התנתק</span>
           </button>
         </div>
