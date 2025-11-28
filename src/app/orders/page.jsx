@@ -144,7 +144,7 @@ export default function OrdersPage() {
 
                           return (
                             <div
-                              key={idx}
+                              key={`${item.product?._id || item.product?.id}-${item.variantSku || 'base'}-${idx}`}
                               className="relative w-16 h-16 border border-neutral-200 bg-neutral-50 shrink-0"
                             >
                               {imageUrl ? (

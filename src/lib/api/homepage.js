@@ -295,20 +295,6 @@ export const createEmptySection = (type) => {
         startDate: null,
         endDate: null
       }
-    },
-    custom_component: {
-      type: 'custom_component',
-      displayOrder: 0,
-      isActive: true,
-      visibility: { desktop: true, tablet: true, mobile: true },
-      content: {
-        customComponent: {
-          name: '',
-          html: { he: '', en: '' },
-          css: '',
-          componentType: 'html'
-        }
-      }
     }
   };
 

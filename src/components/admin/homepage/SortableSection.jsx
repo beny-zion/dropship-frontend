@@ -28,8 +28,6 @@ export default function SortableSection({ section, isSelected, onClick, onDelete
       category_grid: 'Category Grid',
       product_carousel: 'Product Carousel',
       promotional_banner: 'Promotional Banner',
-      custom_component: 'Custom Component',
-      text_block: 'Text Block',
       video_section: 'Video Section'
     };
     return labels[type] || type;

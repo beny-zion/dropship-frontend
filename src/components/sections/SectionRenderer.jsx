@@ -48,14 +48,8 @@ export default function SectionRenderer({ section, language = 'he', preview = fa
       case 'promotional_banner':
         return <PromotionalBanner section={section} language={language} />;
 
-      case 'text_block':
-        return <TextBlock section={section} language={language} />;
-
       case 'video_section':
         return <VideoSection section={section} language={language} />;
-
-      case 'custom_component':
-        return <CustomComponent section={section} language={language} />;
 
       default:
         console.warn(`Unknown section type: ${section.type}`);
@@ -71,28 +65,6 @@ export default function SectionRenderer({ section, language = 'he', preview = fa
     >
       {renderSection()}
     </section>
-  );
-}
-
-// Simple Text Block Component
-function TextBlock({ section, language }) {
-  const { textBlock } = section.content;
-  const content = textBlock.content?.[language] || '';
-  const styling = textBlock.styling || {};
-
-  if (!content) return null;
-
-  return (
-    <div
-      className="container mx-auto px-4 py-12"
-      style={{
-        textAlign: styling.alignment || 'center',
-        color: styling.textColor || '#000000',
-        fontSize: styling.fontSize || '16px'
-      }}
-      dir={language === 'he' ? 'rtl' : 'ltr'}
-      dangerouslySetInnerHTML={{ __html: content }}
-    />
   );
 }
 
@@ -151,22 +123,6 @@ function VideoSection({ section, language }) {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-// Custom Component
-function CustomComponent({ section, language }) {
-  const { customComponent } = section.content;
-  const html = customComponent.html?.[language] || '';
-  const css = customComponent.css || '';
-
-  if (!html) return null;
-
-  return (
-    <div className="custom-component-wrapper">
-      {css && <style>{css}</style>}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }

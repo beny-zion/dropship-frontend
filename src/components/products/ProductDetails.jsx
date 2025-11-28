@@ -79,9 +79,13 @@ export default function ProductDetails({ product }) {
   const updateSelectedVariant = (color, size) => {
     if (!hasVariants) return;
 
-    const variant = product.variants.find(v =>
-      v.color === color && v.size === size && v.stock?.available
-    );
+    // ⭐ תיקון: חיפוש מדויק שתומך בערכי null
+    // השוואה מדויקת: אם שני הצדדים null/undefined - זה התאמה
+    const variant = product.variants.find(v => {
+      const colorMatch = (v.color || null) === (color || null);
+      const sizeMatch = (v.size || null) === (size || null);
+      return colorMatch && sizeMatch && v.stock?.available;
+    });
 
     if (variant) {
       setSelectedVariant(variant);
@@ -90,6 +94,9 @@ export default function ProductDetails({ product }) {
         const primaryImg = variant.images.find(img => img.isPrimary) || variant.images[0];
         setSelectedImage(primaryImg.url);
       }
+    } else {
+      // אם לא נמצא ווריאנט, נקה את הבחירה
+      setSelectedVariant(null);
     }
   };
 
@@ -104,7 +111,10 @@ export default function ProductDetails({ product }) {
       setSelectedImage(primaryImg.url);
     }
 
-    if (selectedSize) {
+    // ⭐ תיקון: אם אין מידות זמינות, עדכן ווריאנט מיד (מוצרים עם צבעים בלבד)
+    if (availableSizes.length === 0) {
+      updateSelectedVariant(color, null);
+    } else if (selectedSize) {
       updateSelectedVariant(color, selectedSize);
     } else if (availableSizes.length === 1) {
       // Auto-select if only one size available
@@ -116,7 +126,11 @@ export default function ProductDetails({ product }) {
   // Handle size selection
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
-    if (selectedColor) {
+
+    // ⭐ תיקון: אם אין צבעים זמינים, עדכן ווריאנט מיד (מוצרים עם מידות בלבד)
+    if (availableColors.length === 0) {
+      updateSelectedVariant(null, size);
+    } else if (selectedColor) {
       updateSelectedVariant(selectedColor, size);
     } else if (availableColors.length === 1) {
       // Auto-select if only one color available
@@ -138,16 +152,24 @@ export default function ProductDetails({ product }) {
   const handleAddToCart = async () => {
     // Validate variant selection if product has variants
     if (hasVariants) {
+      // בדוק שבחרו צבע אם יש צבעים זמינים
       if (!selectedColor && availableColors.length > 0) {
         toast.error('אנא בחר צבע');
         return;
       }
+      // בדוק שבחרו מידה אם יש מידות זמינות
       if (!selectedSize && availableSizes.length > 0) {
         toast.error('אנא בחר מידה');
         return;
       }
+      // ⭐ תיקון: אם יש ווריאנטים אבל לא נבחר אף אחד - נסה למצוא אוטומטית
       if (!selectedVariant) {
-        toast.error('אנא בחר ווריאנט');
+        // אם אין צבעים ומידות כלל, זה אומר שהמוצר לא זמין
+        if (availableColors.length === 0 && availableSizes.length === 0) {
+          toast.error('מוצר זה לא זמין כרגע');
+          return;
+        }
+        toast.error('אנא בחר אפשרויות מוצר');
         return;
       }
     }

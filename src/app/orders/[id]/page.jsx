@@ -185,8 +185,8 @@ export default function OrderDetailsPage() {
           <div className="border border-neutral-200 p-6">
             <h2 className="text-lg font-normal tracking-wide mb-6">פריטים בהזמנה</h2>
             <div className="space-y-6">
-              {order.items.map((item) => (
-                <div key={item.product._id} className="flex gap-4 pb-6 border-b border-neutral-200 last:border-0 last:pb-0">
+              {order.items.map((item, idx) => (
+                <div key={`${item.product._id || item.product.id}-${item.variantSku || 'base'}-${idx}`} className="flex gap-4 pb-6 border-b border-neutral-200 last:border-0 last:pb-0">
                   <div className="relative h-20 w-20 bg-neutral-50 border border-neutral-200 flex-shrink-0 flex items-center justify-center">
                     {item.image ? (
                       // eslint-disable-next-line @next/next/no-img-element

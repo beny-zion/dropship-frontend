@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createEmptySection } from '@/lib/api/homepage';
 import { Card } from '@/components/ui/card';
-import { Image, Grid3x3, Package, Megaphone, Code, ImageIcon } from 'lucide-react';
+import { Image, Grid3x3, Package, Megaphone, ImageIcon } from 'lucide-react';
 
 const COMPONENT_TYPES = [
   {
@@ -38,13 +38,6 @@ const COMPONENT_TYPES = [
     icon: Megaphone,
     description: 'באנר פרסומי עם תזמון',
     color: 'bg-orange-50 text-orange-600 border-orange-200'
-  },
-  {
-    type: 'custom_component',
-    name: 'Custom Component',
-    icon: Code,
-    description: 'HTML/CSS/JS מותאם אישית',
-    color: 'bg-gray-50 text-gray-600 border-gray-200'
   }
 ];
 
