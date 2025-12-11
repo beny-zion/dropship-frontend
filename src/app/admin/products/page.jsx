@@ -50,7 +50,10 @@ export default function ProductsManagementPage() {
     mutationFn: (id) => adminApi.deleteProduct(id),
     onSuccess: () => {
       toast.success('המוצר נמחק בהצלחה');
-      queryClient.invalidateQueries(['admin', 'products']);
+      // Invalidate with exact query key pattern
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
+      // Also refetch the current query immediately
+      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, status: statusFilter, page, limit }] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'שגיאה במחיקת המוצר');
@@ -62,7 +65,8 @@ export default function ProductsManagementPage() {
     mutationFn: (id) => adminApi.toggleFeatured(id),
     onSuccess: () => {
       toast.success('סטטוס מומלץ עודכן');
-      queryClient.invalidateQueries(['admin', 'products']);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
+      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, status: statusFilter, page, limit }] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'שגיאה בעדכון');

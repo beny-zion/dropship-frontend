@@ -125,6 +125,60 @@ export const adminApi = {
     return await apiClient.patch(`/admin/orders/${id}/refresh-items`);
   },
 
+  getOrderDetailedStats: async (id) => {
+    return await apiClient.get(`/admin/orders/${id}/statistics`);
+  },
+
+  getOrdersWithAlerts: async () => {
+    return await apiClient.get('/admin/orders/alerts');
+  },
+
+  getItemStatistics: async () => {
+    return await apiClient.get('/admin/orders/items/statistics');
+  },
+
+  // ✅ NEW: Dashboard KPIs
+  getOrdersKPIs: async () => {
+    return await apiClient.get('/admin/orders/kpis');
+  },
+
+  // ✅ NEW: Filtered Orders
+  getOrdersFiltered: async (params = {}) => {
+    return await apiClient.get('/admin/orders/filtered', { params });
+  },
+
+  // ✅ NEW: Items Grouped by Supplier
+  getItemsGroupedBySupplier: async () => {
+    return await apiClient.get('/admin/orders/items/by-supplier');
+  },
+
+  // ✅ NEW: Bulk Order from Supplier
+  bulkOrderFromSupplier: async (data) => {
+    return await apiClient.post('/admin/orders/items/bulk-order-from-supplier', data);
+  },
+
+  // ============================================
+  // SYSTEM SETTINGS
+  // ============================================
+
+  getSystemSettings: async () => {
+    return await apiClient.get('/admin/settings');
+  },
+
+  updateSystemSettings: async (settings) => {
+    return await apiClient.put('/admin/settings', settings);
+  },
+
+  getShippingRate: async (currency = 'ILS') => {
+    return await apiClient.get('/admin/settings/shipping-rate', {
+      params: { currency }
+    });
+  },
+
+  resetSystemSettings: async () => {
+    return await apiClient.post('/admin/settings/reset');
+  },
+
   // ============================================
   // USERS MANAGEMENT
   // ============================================
@@ -147,6 +201,14 @@ export const adminApi = {
 
   updateUserStatus: async (id, status) => {
     return await apiClient.patch(`/admin/users/${id}/status`, { status });
+  },
+
+  // ============================================
+  // INVENTORY MANAGEMENT
+  // ============================================
+
+  updateProductAvailability: async (productId, data) => {
+    return await apiClient.patch(`/admin/products/${productId}/availability`, data);
   }
 };
 

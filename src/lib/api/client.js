@@ -11,10 +11,40 @@ const apiClient = axios.create({
   },
 });
 
+// 🔒 Request interceptor - Add CSRF token to every request
+apiClient.interceptors.request.use(
+  (config) => {
+    // Get CSRF token from axios defaults (set by CsrfProvider)
+    const csrfToken = axios.defaults.headers.common['X-CSRF-Token'];
+
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor - טיפול בשגיאות
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    // 🔒 Handle CSRF errors
+    if (error.response?.data?.code === 'CSRF_ERROR') {
+      console.error('🔒 CSRF token invalid - refreshing page...');
+
+      // Refresh the page to get a new CSRF token
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+
+      return Promise.reject({
+        message: 'CSRF token expired. Page will reload...',
+        isCsrfError: true
+      });
+    }
+
     // Create error object with better info for admin pages
     const errorObj = {
       message: error.message,
@@ -22,6 +52,7 @@ apiClient.interceptors.response.use(
       data: error.response?.data,
       isAuthError: error.response?.status === 401,
       isNetworkError: !error.response,
+      isCsrfError: error.response?.data?.code === 'CSRF_ERROR',
     };
 
     if (error.response?.status === 401) {

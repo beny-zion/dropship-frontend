@@ -3,6 +3,7 @@
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -10,11 +11,29 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, AlertTriangle, Shield, Truck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { settingsApi } from '@/lib/api/settings';
 
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart, clearCart, getItemCount, loading } = useCart();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const [freeShippingSettings, setFreeShippingSettings] = useState(null);
+
+  // Load free shipping settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await settingsApi.getShippingSettings();
+        const data = response.data;
+        if (data?.shipping?.freeShipping) {
+          setFreeShippingSettings(data.shipping.freeShipping);
+        }
+      } catch (error) {
+        console.error('Failed to load shipping settings:', error);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -346,27 +365,27 @@ export default function CartPage() {
             </div>
 
             {/* Free Shipping Progress */}
-            {cart.pricing.shipping > 0 && cart.pricing.subtotal < 200 && (
+            {freeShippingSettings?.enabled && freeShippingSettings?.threshold?.ils > 0 && cart.pricing.subtotal < freeShippingSettings.threshold.ils && (
               <div className="bg-blue-50 border border-blue-200 text-blue-900 text-sm p-4 rounded-lg mb-6">
                 <p className="font-semibold mb-2">כמעט משלוח חינם!</p>
                 <p>
-                  הוסף עוד <span className="font-bold">₪{(200 - cart.pricing.subtotal).toFixed(2)}</span> וקבל משלוח חינם
+                  הוסף עוד <span className="font-bold">₪{(freeShippingSettings.threshold.ils - cart.pricing.subtotal).toFixed(2)}</span> וקבל משלוח חינם
                 </p>
                 <div className="mt-2 bg-blue-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(cart.pricing.subtotal / 200) * 100}%` }}
+                    style={{ width: `${Math.min((cart.pricing.subtotal / freeShippingSettings.threshold.ils) * 100, 100)}%` }}
                   />
                 </div>
               </div>
             )}
 
-            {/* Free Shipping Badge */}
-            {/* {cart.pricing.shipping === 0 && (
+            {/* Free Shipping Achieved */}
+            {freeShippingSettings?.enabled && freeShippingSettings?.threshold?.ils > 0 && cart.pricing.subtotal >= freeShippingSettings.threshold.ils && (
               <div className="bg-green-50 border border-green-200 text-green-900 text-sm p-4 rounded-lg mb-6 text-center">
                 <p className="font-semibold">🎉 זכית במשלוח חינם!</p>
               </div>
-            )} */}
+            )}
 
             {/* Action Buttons */}
             <div className="space-y-3">

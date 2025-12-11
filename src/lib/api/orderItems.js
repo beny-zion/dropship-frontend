@@ -1,0 +1,64 @@
+/**
+ * Order Items API Client
+ *
+ * פונקציות לניהול פריטים בהזמנות
+ */
+
+import api from './client';
+
+/**
+ * עדכון סטטוס פריט
+ */
+export async function updateItemStatus(orderId, itemId, newStatus, notes = '') {
+  const response = await api.put(`/orders/${orderId}/items/${itemId}/status`, {
+    newStatus,
+    notes
+  });
+  return response.data;
+}
+
+/**
+ * הזמנה מספק
+ */
+export async function orderItemFromSupplier(orderId, itemId, data) {
+  const response = await api.post(`/orders/${orderId}/items/${itemId}/order-from-supplier`, data);
+  return response.data;
+}
+
+/**
+ * ביטול פריט
+ */
+export async function cancelOrderItem(orderId, itemId, reason) {
+  const response = await api.post(`/orders/${orderId}/items/${itemId}/cancel`, {
+    reason
+  });
+  return response.data;
+}
+
+/**
+ * קבלת היסטוריה של פריט
+ */
+export async function getItemHistory(orderId, itemId) {
+  const response = await api.get(`/orders/${orderId}/items/${itemId}/history`);
+  return response.data;
+}
+
+/**
+ * עדכון קבוצתי של פריטים
+ */
+export async function bulkUpdateItems(orderId, itemIds, newStatus, notes = '') {
+  const response = await api.put(`/orders/${orderId}/items/bulk-update`, {
+    itemIds,
+    newStatus,
+    notes
+  });
+  return response.data;
+}
+
+export default {
+  updateItemStatus,
+  orderItemFromSupplier,
+  cancelOrderItem,
+  getItemHistory,
+  bulkUpdateItems
+};

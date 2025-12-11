@@ -12,7 +12,9 @@ import {
   LogOut,
   Folder,
   Home,
-  Image
+  Image,
+  Settings,
+  ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
@@ -39,9 +41,24 @@ const navItems = [
     icon: Package
   },
   {
+    name: 'בדיקת זמינות',
+    href: '/admin/inventory',
+    icon: ClipboardCheck
+  },
+  {
     name: 'הזמנות',
     href: '/admin/orders',
-    icon: ShoppingCart
+    icon: ShoppingCart,
+    subItems: [
+      {
+        name: 'כל ההזמנות',
+        href: '/admin/orders'
+      },
+      {
+        name: 'הזמנות מרוכזות',
+        href: '/admin/orders/bulk-by-supplier'
+      }
+    ]
   },
   {
     name: 'משתמשים',
@@ -52,6 +69,11 @@ const navItems = [
     name: 'ניהול מדיה',
     href: '/admin/media',
     icon: Image
+  },
+  {
+    name: 'הגדרות',
+    href: '/admin/settings',
+    icon: Settings
   }
 ];
 
@@ -109,21 +131,47 @@ export default function AdminSidebar() {
             const Icon = item.icon;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => closeSidebar()}
-                className={`
-                  flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                  ${isActive
-                    ? 'bg-blue-50 text-blue-600 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="truncate">{item.name}</span>
-              </Link>
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={() => closeSidebar()}
+                  className={`
+                    flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                    ${isActive
+                      ? 'bg-blue-50 text-blue-600 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+
+                {/* Sub Items */}
+                {item.subItems && item.subItems.length > 0 && (
+                  <div className="mr-8 mt-1 space-y-1">
+                    {item.subItems.map((subItem) => {
+                      const isSubActive = pathname === subItem.href;
+                      return (
+                        <Link
+                          key={subItem.href}
+                          href={subItem.href}
+                          onClick={() => closeSidebar()}
+                          className={`
+                            block px-4 py-2 text-sm rounded-lg transition-colors
+                            ${isSubActive
+                              ? 'bg-blue-50 text-blue-600 font-medium'
+                              : 'text-gray-600 hover:bg-gray-50'
+                            }
+                          `}
+                        >
+                          {subItem.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

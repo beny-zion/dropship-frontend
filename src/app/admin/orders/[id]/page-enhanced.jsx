@@ -1,4 +1,6 @@
 // app/admin/orders/[id]/page.jsx - Enhanced Order Detail Page with Item Management
+//
+// ✅ זה הקובץ המשודרג - להחליף את page.jsx הקיים
 
 'use client';
 
@@ -18,16 +20,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { sanitizeHTML } from '@/lib/utils/sanitize';
-import SafeText from '@/components/ui/SafeText';
 
 // ✅ ייבוא הקומפוננטות החדשות
 import ItemStatusBadge from '@/components/admin/orders/ItemStatusBadge';
-import UpdateStatusModal from '@/components/admin/orders/UpdateStatusModal';
+import ItemStatusSelector from '@/components/admin/orders/ItemStatusSelector';
 import OrderFromSupplierModal from '@/components/admin/orders/OrderFromSupplierModal';
 import CancelItemModal from '@/components/admin/orders/CancelItemModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
-import ItemHistoryModal from '@/components/admin/orders/ItemHistoryModal';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
   updateItemStatus,
@@ -56,8 +55,6 @@ export default function OrderDetailPage() {
   // ✅ מצב למודלים
   const [orderSupplierModal, setOrderSupplierModal] = useState(null);
   const [cancelModal, setCancelModal] = useState(null);
-  const [historyModal, setHistoryModal] = useState(null);
-  const [updateStatusModal, setUpdateStatusModal] = useState(null);
 
   // Fetch order
   const { data, isLoading } = useQuery({
@@ -70,112 +67,25 @@ export default function OrderDetailPage() {
   // ✅ Mutation להזמנה מספק
   const orderFromSupplierMutation = useMutation({
     mutationFn: ({ itemId, data }) => orderItemFromSupplier(params.id, itemId, data),
-    onSuccess: (response) => {
-      // ✅ התגובה היא { success: true, data: {...} }
-      const data = response.data || response;
-
-      toast.success(data.message || 'הפריט הוזמן בהצלחה מהספק');
+    onSuccess: () => {
+      toast.success('הפריט הוזמן בהצלחה מהספק');
       queryClient.invalidateQueries(['admin', 'order', params.id]);
       setOrderSupplierModal(null);
-
-      // בדוק אם יש הצעה לעדכון סטטוס ראשי
-      const suggestion = data?.orderStatusSuggestion;
-      console.log('📦 Order From Supplier Response:', {
-        fullResponse: response,
-        data,
-        suggestion,
-        hasSuggestion: !!suggestion,
-        hasMessage: !!suggestion?.message
-      });
-
-      if (suggestion && suggestion.message) {
-        toast(suggestion.message, {
-          duration: 10000,
-          action: {
-            label: 'עדכן עכשיו',
-            onClick: () => {
-              updateOrderStatusMutation.mutate(suggestion.suggestedStatus);
-            }
-          }
-        });
-      }
     },
     onError: (error) => {
-      const errorData = error.data || error.response?.data;
-      const errorMsg = errorData?.message || 'שגיאה בהזמנה מספק';
-      const errorDetails = errorData?.error;
-
-      if (errorDetails) {
-        toast.error(errorMsg, {
-          description: `פרטים: ${errorDetails}`,
-          duration: 6000
-        });
-      } else {
-        toast.error(errorMsg, { duration: 6000 });
-      }
+      toast.error(error.response?.data?.message || 'שגיאה בהזמנה מספק');
     }
   });
 
-  // ✅ Mutation לעדכון סטטוס ראשי של ההזמנה
-  const updateOrderStatusMutation = useMutation({
-    mutationFn: (newStatus) => adminApi.updateOrderStatus(params.id, newStatus),
-    onSuccess: () => {
-      toast.success('סטטוס ההזמנה עודכן בהצלחה!');
-      queryClient.invalidateQueries(['admin', 'order', params.id]);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'שגיאה בעדכון סטטוס ההזמנה');
-    }
-  });
-
-  // ✅ Mutation לעדכון סטטוס פריט
+  // ✅ Mutation לעדכון סטטוס
   const updateStatusMutation = useMutation({
-    mutationFn: ({ itemId, newStatus, notes }) => updateItemStatus(params.id, itemId, newStatus, notes),
-    onSuccess: (response) => {
-      // ✅ התגובה היא { success: true, data: {...} }
-      const data = response.data || response;
-
-      console.log('📊 Status Update Response:', {
-        fullResponse: response,
-        data,
-        message: data?.message,
-        orderStatusSuggestion: data?.orderStatusSuggestion
-      });
-
-      toast.success(data.message || 'הסטטוס עודכן בהצלחה');
+    mutationFn: ({ itemId, newStatus }) => updateItemStatus(params.id, itemId, newStatus),
+    onSuccess: () => {
+      toast.success('הסטטוס עודכן בהצלחה');
       queryClient.invalidateQueries(['admin', 'order', params.id]);
-      setUpdateStatusModal(null);
-
-      // בדוק אם יש הצעה לעדכון סטטוס ראשי
-      const suggestion = data?.orderStatusSuggestion;
-
-      if (suggestion && suggestion.message) {
-        // הצג toast עם כפתור לעדכון מהיר
-        toast(suggestion.message, {
-          duration: 10000,
-          action: {
-            label: 'עדכן עכשיו',
-            onClick: () => {
-              updateOrderStatusMutation.mutate(suggestion.suggestedStatus);
-            }
-          }
-        });
-      }
     },
     onError: (error) => {
-      // הנתונים נמצאים ישירות ב-error.data (לא ב-error.response.data)
-      const errorData = error.data || error.response?.data;
-
-      // אם יש מידע מפורט על הסטטוסים המותרים
-      if (errorData?.allowedTransitions && errorData.allowedTransitions.length > 0) {
-        const allowedList = errorData.allowedTransitions.map(t => t.label).join(', ');
-        toast.error(errorData.message, {
-          description: `סטטוסים מותרים: ${allowedList}`,
-          duration: 8000
-        });
-      } else {
-        toast.error(errorData?.message || 'שגיאה בעדכון הסטטוס');
-      }
+      toast.error(error.response?.data?.message || 'שגיאה בעדכון הסטטוס');
     }
   });
 
@@ -183,36 +93,13 @@ export default function OrderDetailPage() {
   const cancelItemMutation = useMutation({
     mutationFn: ({ itemId, reason }) => cancelOrderItem(params.id, itemId, reason),
     onSuccess: (response) => {
-      // ✅ התגובה היא { success: true, data: {...} }
-      const data = response.data || response;
-
-      console.log('🗑️ Cancel Item Response:', {
-        fullResponse: response,
-        data,
-        message: data?.message,
-        orderUpdate: data?.orderUpdate
-      });
-
+      const data = response.data;
       toast.success(data.message || 'הפריט בוטל בהצלחה');
 
       // הצג אזהרה אם לא עומד במינימום
-      if (data.orderUpdate && !data.orderUpdate.meetsMinimum) {
+      if (!data.orderUpdate?.meetsMinimum) {
         toast.warning('שים לב: ההזמנה לא עומדת במינימום!', {
           duration: 5000
-        });
-      }
-
-      // בדוק אם יש הצעה לעדכון סטטוס ראשי
-      const suggestion = data.orderStatusSuggestion;
-      if (suggestion && suggestion.message) {
-        toast(suggestion.message, {
-          duration: 10000,
-          action: {
-            label: 'עדכן עכשיו',
-            onClick: () => {
-              updateOrderStatusMutation.mutate(suggestion.suggestedStatus);
-            }
-          }
         });
       }
 
@@ -220,18 +107,7 @@ export default function OrderDetailPage() {
       setCancelModal(null);
     },
     onError: (error) => {
-      const errorData = error.data || error.response?.data;
-      const errorMsg = errorData?.message || 'שגיאה בביטול הפריט';
-      const errorDetails = errorData?.error;
-
-      if (errorDetails) {
-        toast.error(errorMsg, {
-          description: `פרטים: ${errorDetails}`,
-          duration: 6000
-        });
-      } else {
-        toast.error(errorMsg, { duration: 6000 });
-      }
+      toast.error(error.response?.data?.message || 'שגיאה בביטול הפריט');
     }
   });
 
@@ -243,21 +119,9 @@ export default function OrderDetailPage() {
     setCancelModal(item);
   };
 
-  const handleShowHistory = (item) => {
-    setHistoryModal(item);
-  };
-
-  const handleUpdateStatus = (item) => {
-    setUpdateStatusModal(item);
-  };
-
-  const handleStatusChange = (newStatus, notes) => {
-    if (newStatus && updateStatusModal) {
-      updateStatusMutation.mutate({
-        itemId: updateStatusModal._id,
-        newStatus,
-        notes
-      });
+  const handleStatusChange = (itemId, newStatus) => {
+    if (newStatus) {
+      updateStatusMutation.mutate({ itemId, newStatus });
     }
   };
 
@@ -298,30 +162,9 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Badge className={statusConfig[order.status]?.className + ' text-base px-4 py-2'}>
-            {statusConfig[order.status]?.label || order.status}
-          </Badge>
-
-          <select
-            value={order.status}
-            onChange={(e) => {
-              if (e.target.value !== order.status) {
-                if (confirm(`האם לעדכן את סטטוס ההזמנה ל"${statusConfig[e.target.value]?.label}"?`)) {
-                  updateOrderStatusMutation.mutate(e.target.value);
-                }
-              }
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:outline-none"
-          >
-            <option value="">שנה סטטוס...</option>
-            {Object.entries(statusConfig).map(([key, config]) => (
-              <option key={key} value={key}>
-                {config.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Badge className={statusConfig[order.status]?.className + ' text-base px-4 py-2'}>
+          {statusConfig[order.status]?.label || order.status}
+        </Badge>
       </div>
 
       {/* ✅ אזהרת מינימום */}
@@ -362,21 +205,21 @@ export default function OrderDetailPage() {
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div>
-                            <SafeText as="p" className="font-medium text-gray-900">
+                            <p className="font-medium text-gray-900">
                               {item.name}
-                            </SafeText>
+                            </p>
 
                             {/* Variant Details */}
                             {item.variantDetails && (
                               <div className="flex gap-2 mt-1">
                                 {item.variantDetails.color && (
                                   <Badge variant="outline" className="text-xs">
-                                    <SafeText>{item.variantDetails.color}</SafeText>
+                                    {item.variantDetails.color}
                                   </Badge>
                                 )}
                                 {item.variantDetails.size && (
                                   <Badge variant="outline" className="text-xs">
-                                    <SafeText>{item.variantDetails.size}</SafeText>
+                                    {item.variantDetails.size}
                                   </Badge>
                                 )}
                               </div>
@@ -388,7 +231,7 @@ export default function OrderDetailPage() {
 
                             {item.supplierName && (
                               <p className="text-xs text-gray-400 mt-1">
-                                ספק: <SafeText>{item.supplierName}</SafeText>
+                                ספק: {item.supplierName}
                               </p>
                             )}
                           </div>
@@ -404,7 +247,7 @@ export default function OrderDetailPage() {
                               ❌ פריט בוטל
                             </p>
                             <p className="text-xs text-red-700 mt-1">
-                              סיבה: <SafeText>{item.cancellation.reason}</SafeText>
+                              סיבה: {item.cancellation.reason}
                             </p>
                             <p className="text-xs text-red-700">
                               החזר: ₪{item.cancellation.refundAmount}
@@ -447,16 +290,13 @@ export default function OrderDetailPage() {
                           </Button>
                         )}
 
-                        {/* Update Status Button */}
+                        {/* Status Selector */}
                         {!isPending && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateStatus(item)}
+                          <ItemStatusSelector
+                            currentStatus={item.itemStatus}
+                            onSelect={(newStatus) => handleStatusChange(item._id, newStatus)}
                             disabled={updateStatusMutation.isPending}
-                          >
-                            עדכן סטטוס
-                          </Button>
+                          />
                         )}
 
                         {/* Supplier Link */}
@@ -470,15 +310,6 @@ export default function OrderDetailPage() {
                             <ExternalLink className="w-3 h-3 mr-2" />
                           </Button>
                         )}
-
-                        {/* History Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleShowHistory(item)}
-                        >
-                          היסטוריה
-                        </Button>
 
                         {/* Cancel Item Button */}
                         <Button
@@ -499,22 +330,6 @@ export default function OrderDetailPage() {
             {/* ✅ Pricing Summary with Refunds */}
             <div className="mt-6 pt-6 border-t-2 border-gray-300 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">סכום ביניים:</span>
-                <span>₪{order.pricing?.subtotal?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">משלוח:</span>
-                {order.pricing?.shipping === 0 ? (
-                  <span className="text-green-600 font-medium">חינם 🎉</span>
-                ) : (
-                  <span>₪{order.pricing?.shipping?.toLocaleString()}</span>
-                )}
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">מע"מ:</span>
-                <span>₪{order.pricing?.tax?.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-medium pt-2 border-t border-gray-200">
                 <span className="text-gray-600">סכום מקורי:</span>
                 <span>₪{order.pricing?.total?.toLocaleString()}</span>
               </div>
@@ -530,7 +345,6 @@ export default function OrderDetailPage() {
               </div>
             </div>
           </div>
-
         </div>
 
         {/* Sidebar - Customer Info */}
@@ -544,24 +358,24 @@ export default function OrderDetailPage() {
             <div className="space-y-3 text-sm">
               <div>
                 <p className="text-gray-500">שם:</p>
-                <SafeText as="p" className="font-medium">{order.shippingAddress?.fullName}</SafeText>
+                <p className="font-medium">{order.shippingAddress?.fullName}</p>
               </div>
               <div>
                 <p className="text-gray-500">טלפון:</p>
-                <SafeText as="p" className="font-medium">{order.shippingAddress?.phone}</SafeText>
+                <p className="font-medium">{order.shippingAddress?.phone}</p>
               </div>
               <div>
                 <p className="text-gray-500">אימייל:</p>
-                <SafeText as="p" className="font-medium">{order.shippingAddress?.email}</SafeText>
+                <p className="font-medium">{order.shippingAddress?.email}</p>
               </div>
               <div className="pt-3 border-t">
                 <p className="text-gray-500">כתובת:</p>
                 <p className="font-medium">
-                  <SafeText>{order.shippingAddress?.street}</SafeText>
-                  {order.shippingAddress?.apartment && <>, דירה <SafeText>{order.shippingAddress.apartment}</SafeText></>}
+                  {order.shippingAddress?.street}
+                  {order.shippingAddress?.apartment && `, דירה ${order.shippingAddress.apartment}`}
                 </p>
                 <p className="font-medium">
-                  <SafeText>{order.shippingAddress?.city}</SafeText>, <SafeText>{order.shippingAddress?.zipCode}</SafeText>
+                  {order.shippingAddress?.city}, {order.shippingAddress?.zipCode}
                 </p>
               </div>
             </div>
@@ -609,21 +423,6 @@ export default function OrderDetailPage() {
             reason
           })}
           onClose={() => setCancelModal(null)}
-        />
-      )}
-
-      {historyModal && (
-        <ItemHistoryModal
-          item={historyModal}
-          onClose={() => setHistoryModal(null)}
-        />
-      )}
-
-      {updateStatusModal && (
-        <UpdateStatusModal
-          item={updateStatusModal}
-          onConfirm={handleStatusChange}
-          onClose={() => setUpdateStatusModal(null)}
         />
       )}
     </div>

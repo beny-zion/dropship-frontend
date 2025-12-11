@@ -124,7 +124,9 @@ export default function CheckoutPage() {
       // Create order
       const response = await createOrder(orderData);
 
-      if (response.success) {
+      console.log('📦 Full response from createOrder:', response);
+
+      if (response?.success && response?.data) {
         console.log('✅ Order created successfully:', response.data);
 
         // Save address if requested and not using existing address
@@ -157,9 +159,19 @@ export default function CheckoutPage() {
 
         // Redirect to order page
         router.push(`/orders/${orderId}`);
+      } else {
+        // ⚠️ Response structure unexpected
+        console.error('❌ Unexpected response structure:', response);
+        toast.error('ההזמנה נוצרה אך הייתה בעיה בתגובה מהשרת');
       }
     } catch (error) {
-      console.error('Order error:', error);
+      console.error('❌ Order error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        data: error.data,
+        fullError: error
+      });
 
       // ⭐ Handle price change error
       if (error.code === 'PRICE_CHANGED') {
