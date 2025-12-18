@@ -166,14 +166,14 @@ export default function CartPage() {
 
       {/* Unavailable Items Alert */}
       {hasUnavailableItems && (
-        <div className="bg-neutral-50 border-b border-neutral-200">
+        <div className="bg-red-50 border-b border-red-200">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-neutral-600 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-normal text-neutral-900 mb-1">חלק מהמוצרים אינם זמינים</p>
-                <p className="text-xs font-light text-neutral-600">
-                  הסר מוצרים לא זמינים כדי להמשיך לקופה
+                <p className="text-sm font-semibold text-red-900 mb-1">⚠ חלק מהמוצרים אינם זמינים</p>
+                <p className="text-xs font-light text-red-700">
+                  הסר את המוצרים הלא זמינים מהעגלה כדי להמשיך לקופה
                 </p>
               </div>
             </div>
@@ -196,8 +196,10 @@ export default function CartPage() {
             return (
               <div
                 key={itemKey}
-                className={`border-b border-neutral-200 pb-6 transition-all ${
-                  isUnavailable ? 'opacity-50' : ''
+                className={`border-b pb-6 transition-all ${
+                  isUnavailable
+                    ? 'border-red-200 bg-red-50/30'
+                    : 'border-neutral-200'
                 }`}
               >
                 <div className="flex gap-6">
@@ -236,8 +238,10 @@ export default function CartPage() {
                       );
                     })()}
                     {isUnavailable && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60">
-                        <span className="bg-white px-3 py-1 text-xs font-light tracking-wider">לא זמין</span>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                        <span className="bg-red-600 text-white px-4 py-2 text-xs font-semibold tracking-wider shadow-lg">
+                          אזל מהמלאי
+                        </span>
                       </div>
                     )}
                   </div>
@@ -278,8 +282,9 @@ export default function CartPage() {
 
                     {/* Stock Status */}
                     {isUnavailable && (
-                      <div className="mb-3">
-                        <span className="text-xs font-light text-red-600">אזל מהמלאי</span>
+                      <div className="mb-3 flex items-center gap-2">
+                        <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                        <span className="text-xs font-semibold text-red-600">אזל מהמלאי - הסר מהעגלה</span>
                       </div>
                     )}
 

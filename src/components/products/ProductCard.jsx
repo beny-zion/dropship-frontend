@@ -62,21 +62,35 @@ export default function ProductCard({ product }) {
   return (
     <Link href={`/products/${product.slug || product._id}`}>
       <div
-        className="group relative bg-white overflow-hidden transition-all duration-500 hover:shadow-2xl"
+        className={`group relative bg-white overflow-hidden transition-all duration-500 hover:shadow-2xl ${
+          !product.stock?.available ? 'border-2 border-red-200' : ''
+        }`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Image Container - Large & Elegant */}
         <div className="relative aspect-[3/4] bg-neutral-50 overflow-hidden">
           {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={product.name_he || 'מוצר'}
-              fill
-              className="object-contain transition-transform duration-700 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 33vw"
-              unoptimized={imageUrl.startsWith('data:')}
-            />
+            <>
+              <Image
+                src={imageUrl}
+                alt={product.name_he || 'מוצר'}
+                fill
+                className={`object-contain transition-all duration-700 ${
+                  !product.stock?.available ? 'opacity-40 grayscale' : 'group-hover:scale-105'
+                }`}
+                sizes="(max-width: 768px) 100vw, 33vw"
+                unoptimized={imageUrl.startsWith('data:')}
+              />
+              {/* Unavailable Overlay */}
+              {!product.stock?.available && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="bg-red-600 text-white px-6 py-3 text-sm font-medium tracking-wider shadow-lg">
+                    אזל מהמלאי
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex items-center justify-center h-full text-neutral-300">
               <span className="text-sm font-light tracking-widest">NO IMAGE</span>

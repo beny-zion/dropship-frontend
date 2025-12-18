@@ -2,12 +2,22 @@
  * Order Minimum Warning Component
  *
  * אזהרה כשההזמנה לא עומדת במינימום
+ *
+ * ✨ NEW: משתמש בערכי ברירת מחדל (TODO: לקבל דינמית מהשרת)
  */
 
 import { AlertTriangle } from 'lucide-react';
-import { MINIMUM_ORDER_AMOUNT, MINIMUM_ITEMS_COUNT } from '@/lib/constants/itemStatuses';
 
-export default function OrderMinimumWarning({ order }) {
+// ✅ ערכי ברירת מחדל (TODO: לקבל מ-SystemSettings API)
+// ⚠️ UPDATED: אין מינימום! משלוח 49₪ לכל הזמנה
+const DEFAULT_MINIMUM_AMOUNT = 0;   // ₪ - אין מינימום
+const DEFAULT_MINIMUM_COUNT = 1;    // פריט - לפחות פריט אחד
+
+export default function OrderMinimumWarning({ order, minimumAmount, minimumCount }) {
+  // ✅ שימוש בערכים שהתקבלו או ברירת מחדל
+  const MINIMUM_ORDER_AMOUNT = minimumAmount ?? DEFAULT_MINIMUM_AMOUNT;
+  const MINIMUM_ITEMS_COUNT = minimumCount ?? DEFAULT_MINIMUM_COUNT;
+
   // חישוב פריטים פעילים
   const activeItems = order.items?.filter(item => !item.cancellation?.cancelled) || [];
   const activeTotal = activeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);

@@ -146,3 +146,33 @@ export const ORDER_STATUS_COLORS = {
   shipped_to_customer: 'bg-teal-100 text-teal-800',
   delivered: 'bg-green-100 text-green-800'
 };
+
+// ==================== CUSTOMER CANCELLATION (Phase 4) ====================
+
+/**
+ * בקשת ביטול פריט
+ * @param {string} orderId - Order ID
+ * @param {string} itemId - Item ID
+ * @param {string} [reason] - Cancellation reason (optional)
+ * @returns {Promise} Cancellation result
+ */
+export const requestCancelItem = async (orderId, itemId, reason) => {
+  const response = await client.post(
+    `/orders/${orderId}/items/${itemId}/request-cancel`,
+    { reason }
+  );
+  return response;
+};
+
+/**
+ * בדיקת אפשרות ביטול פריט
+ * @param {string} orderId - Order ID
+ * @param {string} itemId - Item ID
+ * @returns {Promise} Cancellation eligibility
+ */
+export const checkCanCancelItem = async (orderId, itemId) => {
+  const response = await client.get(
+    `/orders/${orderId}/items/${itemId}/can-cancel`
+  );
+  return response;
+};

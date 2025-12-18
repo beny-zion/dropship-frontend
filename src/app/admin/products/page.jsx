@@ -21,25 +21,17 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-const statusConfig = {
-  active: { label: 'פעיל', className: 'bg-green-100 text-green-800' },
-  inactive: { label: 'לא פעיל', className: 'bg-gray-100 text-gray-800' },
-  outOfStock: { label: 'אזל מהמלאי', className: 'bg-red-100 text-red-800' }
-};
-
 export default function ProductsManagementPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const limit = 20;
 
   // Fetch products
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'products', { search, status: statusFilter, page, limit }],
+    queryKey: ['admin', 'products', { search, page, limit }],
     queryFn: () => adminApi.getAllProducts({
       search,
-      status: statusFilter !== 'all' ? statusFilter : undefined,
       page,
       limit
     })
@@ -53,7 +45,7 @@ export default function ProductsManagementPage() {
       // Invalidate with exact query key pattern
       queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
       // Also refetch the current query immediately
-      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, status: statusFilter, page, limit }] });
+      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, page, limit }] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'שגיאה במחיקת המוצר');
@@ -66,7 +58,7 @@ export default function ProductsManagementPage() {
     onSuccess: () => {
       toast.success('סטטוס מומלץ עודכן');
       queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
-      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, status: statusFilter, page, limit }] });
+      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, page, limit }] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'שגיאה בעדכון');
@@ -132,28 +124,13 @@ export default function ProductsManagementPage() {
             />
           </div>
 
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">כל הסטטוסים</option>
-            <option value="active">פעיל</option>
-            <option value="inactive">לא פעיל</option>
-            <option value="outOfStock">אזל מהמלאי</option>
-          </select>
-
-          {/* Clear Filters */}
-          {(search || statusFilter !== 'all') && (
+          {/* Clear Search */}
+          {search && (
             <Button
               variant="outline"
-              onClick={() => {
-                setSearch('');
-                setStatusFilter('all');
-              }}
+              onClick={() => setSearch('')}
             >
-              נקה סינון
+              נקה חיפוש
             </Button>
           )}
         </div>
@@ -192,7 +169,7 @@ export default function ProductsManagementPage() {
                       מלאי
                     </th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">
-                      סטטוס
+                      זמינות
                     </th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">
                       פעולות
@@ -275,10 +252,10 @@ export default function ProductsManagementPage() {
                         )}
                       </td>
 
-                      {/* Status */}
+                      {/* Availability Status */}
                       <td className="py-3 px-4">
-                        <Badge className={statusConfig[product.status]?.className}>
-                          {statusConfig[product.status]?.label || product.status}
+                        <Badge className={product.stock?.available !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                          {product.stock?.available !== false ? 'זמין' : 'לא זמין'}
                         </Badge>
                       </td>
 

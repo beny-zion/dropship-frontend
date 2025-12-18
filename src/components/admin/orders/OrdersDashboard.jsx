@@ -5,14 +5,24 @@ import { useRouter } from 'next/navigation';
 import KPICardsRow from './KPICardsRow';
 import QuickFilters from './QuickFilters';
 import OrdersListWidget from './OrdersListWidget';
+import OrderSearchBar from './OrderSearchBar';
 import { toast } from 'sonner';
 
 export default function OrdersDashboard() {
   const [activeFilter, setActiveFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
   const handleFilterChange = (filterId) => {
     setActiveFilter(filterId);
+    setSearchTerm(''); // נקה חיפוש כשמחליפים פילטר
+  };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    if (term) {
+      setActiveFilter('all'); // אפס פילטר כשמחפשים
+    }
   };
 
   const handleQuickAction = (action, orderId) => {
@@ -35,6 +45,9 @@ export default function OrdersDashboard() {
       {/* KPI Cards */}
       <KPICardsRow onFilterClick={handleFilterChange} />
 
+      {/* Search Bar */}
+      <OrderSearchBar onSearch={handleSearch} />
+
       {/* Quick Filters */}
       <QuickFilters
         activeFilter={activeFilter}
@@ -44,6 +57,7 @@ export default function OrdersDashboard() {
       {/* Orders List */}
       <OrdersListWidget
         activeFilter={activeFilter}
+        searchTerm={searchTerm}
         onQuickAction={handleQuickAction}
       />
     </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, Copy, Image as ImageIcon, Wand2 } from 'lucide-react';
 
-export default function VariantManager({ variants = [], onChange }) {
+export default function VariantManager({ variants = [], onChange, isNewProduct = false }) {
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [bulkColors, setBulkColors] = useState('');
   const [bulkSizes, setBulkSizes] = useState('');
@@ -16,7 +16,7 @@ export default function VariantManager({ variants = [], onChange }) {
       size: '',
       images: [],
       stock: {
-        available: true,
+        // ❌ NO available field - managed in /admin/inventory
         quantity: null
       },
       additionalCost: {
@@ -146,6 +146,9 @@ export default function VariantManager({ variants = [], onChange }) {
     onChange(newVariants);
   };
 
+  // ❌ REMOVED: Availability management moved to /admin/inventory page
+  // Availability is now managed through the centralized ProductAvailabilityService
+
   // יצירה מהירה של ווריאנטים לפי צבעים ומידות
   const handleBulkCreate = () => {
     if (!baseSKU) {
@@ -173,7 +176,7 @@ export default function VariantManager({ variants = [], onChange }) {
             size: size,
             images: [],
             stock: {
-              available: true,
+              // ❌ NO available field - managed in /admin/inventory
               quantity: null
             },
             additionalCost: {
@@ -196,7 +199,7 @@ export default function VariantManager({ variants = [], onChange }) {
           size: '',
           images: [],
           stock: {
-            available: true,
+            // ❌ NO available field - managed in /admin/inventory
             quantity: null
           },
           additionalCost: {
@@ -218,7 +221,7 @@ export default function VariantManager({ variants = [], onChange }) {
           size: size,
           images: [],
           stock: {
-            available: true,
+            // ❌ NO available field - managed in /admin/inventory
             quantity: null
           },
           additionalCost: {
@@ -244,12 +247,33 @@ export default function VariantManager({ variants = [], onChange }) {
   // קבלת צבעים ייחודיים
   const uniqueColors = [...new Set(variants.map(v => v.color).filter(Boolean))];
 
-  // ספירת ווריאנטים פעילים
-  const activeVariantsCount = variants.filter(v => v.stock?.available !== false).length;
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="space-y-4">
+      {/* Info banner about availability management */}
+      {!isNewProduct && variants.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-sm text-blue-800">
+              <p className="font-semibold mb-1">💡 ניהול זמינות ווריאנטים</p>
+              <p>
+                לעדכון זמינות (זמין/לא זמין) של ווריאנטים, צבעים ומידות ספציפיות, עבור לדף{' '}
+                <a href="/admin/inventory" className="font-bold underline hover:text-blue-900">
+                  בדיקת זמינות
+                </a>
+              </p>
+              <p className="text-xs mt-1">
+                שם תוכל לעדכן זמינות במערכת המרכזית עם Cascade Logic (מוצר → צבע → מידה)
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold">ווריאנטים (צבעים ומידות)</h3>
@@ -259,7 +283,7 @@ export default function VariantManager({ variants = [], onChange }) {
               onClick={() => setIsExpanded(!isExpanded)}
               className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 transition text-sm font-medium"
             >
-              {variants.length} ווריאנטים | {activeVariantsCount} פעילים
+              {variants.length} ווריאנטים
               <span className="text-xs">{isExpanded ? '▼' : '◀'}</span>
             </button>
           )}
@@ -567,29 +591,19 @@ export default function VariantManager({ variants = [], onChange }) {
                 </div>
               </div>
 
-              {/* Stock Available Toggle */}
-              <div className="mt-4 flex items-center">
-                <input
-                  type="checkbox"
-                  id={`variant-available-${index}`}
-                  checked={variant.stock?.available !== false}
-                  onChange={(e) => handleUpdateVariant(index, 'stock.available', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor={`variant-available-${index}`} className="mr-2 text-sm text-gray-700">
-                  זמין לרכישה
-                </label>
-              </div>
+              {/* ❌ REMOVED: Stock availability moved to /admin/inventory page */}
 
               {/* Images - רק אם זה הווריאנט הראשון עם הצבע הזה */}
               {variant.color && variants.findIndex(v => v.color === variant.color) === index && (
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    תמונות צבע: {variant.color}
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    תמונות אלו ישמשו לכל המידות של צבע {variant.color}
-                  </p>
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      תמונות צבע: {variant.color}
+                    </label>
+                    <p className="text-xs text-gray-500">
+                      תמונות אלו ישמשו לכל המידות של צבע {variant.color}
+                    </p>
+                  </div>
 
                   {/* אפשרות להוספת URL */}
                   <div className="mb-3 flex gap-2">

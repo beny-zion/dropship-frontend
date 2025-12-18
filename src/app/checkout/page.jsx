@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { createOrder } from '@/lib/api/orders';
+import { holdCreditCard } from '@/lib/api/payments';
 import { useAddresses, useCreateAddress } from '@/lib/hooks/useAddresses';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -20,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Check, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { PaymentForm } from '@/components/checkout/PaymentForm';
 
 // Validation Schema
 const shippingSchema = z.object({
@@ -44,6 +46,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [saveAddress, setSaveAddress] = useState(true); // Save address by default
+  const [paymentDetails, setPaymentDetails] = useState(null);
 
   const { data: addressesData, isLoading: addressesLoading } = useAddresses();
   // Handle both array and object with data property
@@ -109,71 +112,97 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // Prepare order data
+      // ✅ Validate payment details
+      if (!paymentDetails?.cardNumber || !paymentDetails?.cvv || !paymentDetails?.userId) {
+        toast.error('יש למלא את כל פרטי התשלום');
+        setLoading(false);
+        return;
+      }
+
+      // ✅ Step 1: Create order
       const orderData = {
         items: cart.items.map(item => ({
           product: item.product._id,
-          variantSku: item.variantSku || null, // ⭐ העבר את ה-variantSku
+          variantSku: item.variantSku || null,
           quantity: item.quantity,
         })),
         shippingAddress: data,
         paymentMethod: 'credit_card',
-        expectedTotal: cart.pricing?.total, // ⭐ Send expected total for validation
+        expectedTotal: cart.pricing?.total,
       };
 
-      // Create order
-      const response = await createOrder(orderData);
+      const orderResponse = await createOrder(orderData);
+      console.log('📦 Order created:', orderResponse);
 
-      console.log('📦 Full response from createOrder:', response);
+      if (!orderResponse?.success || !orderResponse?.data) {
+        throw new Error('שגיאה ביצירת ההזמנה');
+      }
 
-      if (response?.success && response?.data) {
-        console.log('✅ Order created successfully:', response.data);
+      const orderId = orderResponse.data._id;
 
-        // Save address if requested and not using existing address
-        if (saveAddress && !selectedAddressId) {
-          try {
-            await createAddressMutation.mutateAsync({
-              fullName: data.fullName,
-              phone: data.phone,
-              street: data.street,
-              apartment: data.apartment,
-              floor: data.floor,
-              entrance: data.entrance,
-              city: data.city,
-              zipCode: data.zipCode,
-              label: 'home',
-              isDefault: addresses.length === 0, // First address is default
-            });
-          } catch (error) {
-            console.error('Save address error:', error);
-            // Don't block order completion if address save fails
-          }
+      // ✅ Step 2: Hold credit card (תפיסת מסגרת)
+      try {
+        // המר מספר כרטיס (הסר רווחים)
+        const cleanCardNumber = paymentDetails.cardNumber.replace(/\s/g, '');
+
+        const holdResponse = await holdCreditCard(orderId, {
+          cardNumber: cleanCardNumber,
+          expMonth: paymentDetails.expMonth,
+          expYear: paymentDetails.expYear,
+          cvv: paymentDetails.cvv,
+          userId: paymentDetails.userId
+        });
+
+        console.log('💳 Payment hold successful:', holdResponse);
+
+        if (!holdResponse?.success) {
+          throw new Error(holdResponse?.message || 'שגיאה בתפיסת מסגרת אשראי');
         }
 
-        const orderId = response.data._id;
-        console.log('🔄 Redirecting to order page:', orderId);
+        toast.success('תפיסת מסגרת אשראי בהצלחה!');
+      } catch (paymentError) {
+        console.error('❌ Payment hold error:', paymentError);
 
-        toast.success('ההזמנה נוצרה בהצלחה!');
-        // Invalidate cart query to refresh - server already cleared it
-        queryClient.invalidateQueries({ queryKey: ['cart'] });
-
-        // Redirect to order page
-        router.push(`/orders/${orderId}`);
-      } else {
-        // ⚠️ Response structure unexpected
-        console.error('❌ Unexpected response structure:', response);
-        toast.error('ההזמנה נוצרה אך הייתה בעיה בתגובה מהשרת');
+        // אם תפיסת המסגרת נכשלה, עדיין נציג את ההזמנה אבל עם התראה
+        toast.error(
+          paymentError.message || 'שגיאה בתפיסת מסגרת האשראי',
+          {
+            description: 'ההזמנה נוצרה אך התשלום לא הושלם. נציג ליצור קשר',
+            duration: 7000,
+          }
+        );
       }
-    } catch (error) {
-      console.error('❌ Order error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-        fullError: error
-      });
 
-      // ⭐ Handle price change error
+      // ✅ Step 3: Save address if requested
+      if (saveAddress && !selectedAddressId) {
+        try {
+          await createAddressMutation.mutateAsync({
+            fullName: data.fullName,
+            phone: data.phone,
+            street: data.street,
+            apartment: data.apartment,
+            floor: data.floor,
+            entrance: data.entrance,
+            city: data.city,
+            zipCode: data.zipCode,
+            label: 'home',
+            isDefault: addresses.length === 0,
+          });
+        } catch (error) {
+          console.error('Save address error:', error);
+          // Don't block order completion if address save fails
+        }
+      }
+
+      // ✅ Step 4: Clear cart & redirect
+      toast.success('ההזמנה נוצרה בהצלחה!');
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+      router.push(`/orders/${orderId}`);
+
+    } catch (error) {
+      console.error('❌ Checkout error:', error);
+
+      // Handle price change error
       if (error.code === 'PRICE_CHANGED') {
         const diff = error.pricing.difference;
         const isIncrease = diff > 0;
@@ -186,7 +215,6 @@ export default function CheckoutPage() {
           }
         );
 
-        // Refresh cart to get new prices
         window.location.reload();
       } else {
         toast.error(error.message || 'שגיאה ביצירת הזמנה');
@@ -291,6 +319,14 @@ export default function CheckoutPage() {
                 </div>
               </div>
             )}
+
+            {/* Payment Form */}
+            <div className="mb-8">
+              <PaymentForm
+                onPaymentDetailsChange={setPaymentDetails}
+                totalAmount={cart.pricing?.total || 0}
+              />
+            </div>
 
             <div className="border border-neutral-200 p-6">
               <h2 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-6">פרטי משלוח</h2>
@@ -553,11 +589,17 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !paymentDetails?.cardNumber}
                 className="w-full py-4 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-3"
               >
                 {loading ? 'מעבד...' : 'אשר והזמן'}
               </button>
+
+              {!paymentDetails?.cardNumber && (
+                <p className="text-xs text-center text-neutral-500 mt-2">
+                  יש למלא פרטי תשלום
+                </p>
+              )}
 
               <button
                 type="button"

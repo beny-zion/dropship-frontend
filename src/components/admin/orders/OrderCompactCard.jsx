@@ -98,28 +98,28 @@ export default function OrderCompactCard({ order, onQuickAction }) {
       {/* Items Summary - תמיד גלוי */}
       <div className="flex items-center gap-4 mt-3 text-xs flex-wrap">
         {stats.orderedFromSupplierCount > 0 && (
-          <span className="flex items-center gap-1 text-blue-600">
+          <span key="ordered" className="flex items-center gap-1 text-blue-600">
             <Package className="w-3 h-3" />
             {stats.orderedFromSupplierCount} מספק
           </span>
         )}
 
         {stats.inTransitCount > 0 && (
-          <span className="flex items-center gap-1 text-purple-600">
+          <span key="transit" className="flex items-center gap-1 text-purple-600">
             <Truck className="w-3 h-3" />
             {stats.inTransitCount} בדרך
           </span>
         )}
 
         {stats.stuckOrders?.stuckItemsCount > 0 && (
-          <span className="flex items-center gap-1 text-red-600 font-medium">
+          <span key="stuck" className="flex items-center gap-1 text-red-600 font-medium">
             <AlertTriangle className="w-3 h-3" />
             {stats.stuckOrders.stuckItemsCount} תקוע ({stats.stuckOrders.maxDaysStuck} ימים)
           </span>
         )}
 
         {stats.cancelledItemsCount > 0 && (
-          <span className="flex items-center gap-1 text-gray-600">
+          <span key="cancelled" className="flex items-center gap-1 text-gray-600">
             <XCircle className="w-3 h-3" />
             {stats.cancelledItemsCount} בוטל
           </span>

@@ -1,4 +1,4 @@
-// app/admin/products/[id]/page.jsx - Advanced Product Editor with Live Preview
+// app/admin/products/[id]/page.jsx - Product Editor (Clean Separation)
 
 'use client';
 
@@ -32,7 +32,6 @@ export default function ProductEditPage() {
       asin: '',
       name_he: '',
       name_en: '',
-      name_en: '',
       description_he: '',
       description_en: '',
       category: '',
@@ -54,8 +53,7 @@ export default function ProductEditPage() {
       'costBreakdown.additionalFees.usd': '',
       'costBreakdown.profitMargin': 0,
       'costBreakdown.notes': '',
-      // מלאי
-      'stock.available': true,
+      // מלאי - ללא stock.available! רק tracking
       'stock.quantity': null,
       'stock.trackInventory': false,
       'stock.lowStockThreshold': 5,
@@ -80,8 +78,7 @@ export default function ProductEditPage() {
       'links.amazon': '',
       'links.affiliateUrl': '',
       'links.supplierUrl': '',
-      // הגדרות
-      status: 'active',
+      // הגדרות - ללא status!
       featured: false,
       images: []
     }
@@ -90,7 +87,7 @@ export default function ProductEditPage() {
   // Watch all form values for live preview
   const formValues = watch();
 
-  // Watch specific fields for calculator and submission with useWatch
+  // Watch specific fields for calculator
   const priceIls = useWatch({ control, name: 'price.ils' });
   const priceUsd = useWatch({ control, name: 'price.usd' });
   const originalPriceIls = useWatch({ control, name: 'originalPrice.ils' });
@@ -104,24 +101,14 @@ export default function ProductEditPage() {
   const additionalFeesUsd = useWatch({ control, name: 'costBreakdown.additionalFees.usd' });
   const estimatedDays = useWatch({ control, name: 'shipping.estimatedDays' });
 
-  // Watch purchase links for validation
+  // Watch purchase links
   const amazonLink = useWatch({ control, name: 'links.amazon' });
   const supplierUrlLink = useWatch({ control, name: 'links.supplierUrl' });
   const supplierUrl = useWatch({ control, name: 'supplier.url' });
   const supplierName = useWatch({ control, name: 'supplier.name' });
   const supplierNotes = useWatch({ control, name: 'supplier.notes' });
 
-  // Check if at least one purchase link is provided
   const hasPurchaseLink = !!(amazonLink || supplierUrlLink || supplierUrl);
-
-  // Debug: בואו נראה מה קורה
-  console.log('💵 Watched values:', {
-    priceIls,
-    baseCostIls,
-    taxPercent,
-    shippingCostIls,
-    additionalFeesIls
-  });
 
   // Fetch categories
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
@@ -138,10 +125,11 @@ export default function ProductEditPage() {
     enabled: !isNew
   });
 
+  const product = productData?.data?.product;
+
   // Set form values when product data loads
   useEffect(() => {
-    if (productData?.data?.product) {
-      const product = productData.data.product;
+    if (product) {
       reset({
         asin: product.asin || '',
         name_he: product.name_he || '',
@@ -165,7 +153,6 @@ export default function ProductEditPage() {
         'costBreakdown.additionalFees.usd': product.costBreakdown?.additionalFees?.usd || 0,
         'costBreakdown.profitMargin': product.costBreakdown?.profitMargin || 0,
         'costBreakdown.notes': product.costBreakdown?.notes || '',
-        'stock.available': product.stock?.available ?? true,
         'stock.quantity': product.stock?.quantity,
         'stock.trackInventory': product.stock?.trackInventory || false,
         'stock.lowStockThreshold': product.stock?.lowStockThreshold || 5,
@@ -185,86 +172,59 @@ export default function ProductEditPage() {
         'links.amazon': product.links?.amazon || '',
         'links.affiliateUrl': product.links?.affiliateUrl || '',
         'links.supplierUrl': product.links?.supplierUrl || '',
-        status: product.status || 'active',
         featured: product.featured || false,
         images: product.images || []
       });
     }
-  }, [productData, reset]);
+  }, [product, reset]);
 
-  // Calculate total cost and profit - using useWatch values
-  // נוסחת מע"מ עסקי מתוחכמת: input VAT vs output VAT
+  // Calculate total cost and profit
   const costCalculation = useMemo(() => {
     const baseCost = parseFloat(baseCostIls) || 0;
     const taxPercentValue = parseFloat(taxPercent) || 18;
     const shippingCost = parseFloat(shippingCostIls) || 0;
     const additionalFees = parseFloat(additionalFeesIls) || 0;
-    const sellPriceWithVat = parseFloat(priceIls) || 0; // מחיר כולל מע"מ שהמשתמש הכניס
+    const sellPriceWithVat = parseFloat(priceIls) || 0;
 
-    // חישוב מע"מ תשומות (input VAT) - מה ששילמתי במכס בייבוא
-    // מע"מ על (עלות מוצר + משלוח)
     const inputVAT = (baseCost + shippingCost) * (taxPercentValue / 100);
-
-    // חישוב מע"מ עסקאות (output VAT) - מה שגביתי מהלקוח
-    // המחיר כולל מע"מ, ואנחנו מחשבים לאחור כמה מע"מ יש בתוכו
-    // נוסחה: מע"מ = מחיר_כולל × (18 / 118) אם מע"מ הוא 18%
     const outputVAT = sellPriceWithVat * (taxPercentValue / (100 + taxPercentValue));
-
-    // מע"מ לתשלום = הפרש בין מה שגביתי למה ששילמתי
     const vatToPayment = outputVAT - inputVAT;
-
-    // מחיר מכירה ללא מע"מ (ההכנסה האמיתית)
     const sellPriceWithoutVat = sellPriceWithVat - outputVAT;
-
-    // עלות מלאה = עלות המוצר + משלוח + עמלות נוספות
     const totalProductCost = baseCost + shippingCost + additionalFees;
-
-    // רווח נקי = הכנסה ללא מע"מ - עלויות - מע"מ לתשלום
     const netProfit = sellPriceWithoutVat - totalProductCost - vatToPayment;
-
-    // שולי רווח (מתוך המחיר כולל מע"מ)
     const profitPercent = sellPriceWithVat > 0 ? (netProfit / sellPriceWithVat) * 100 : 0;
-
-    console.log('💰 חישוב רווחיות מתוחכם:', {
-      'עלות מוצר': baseCost.toFixed(2),
-      'עלות משלוח': shippingCost.toFixed(2),
-      'עמלות נוספות': additionalFees.toFixed(2),
-      'מע"מ תשומות (ששילמתי)': inputVAT.toFixed(2),
-      'מחיר מכירה כולל מע"מ': sellPriceWithVat.toFixed(2),
-      'מע"מ עסקאות (שגביתי)': outputVAT.toFixed(2),
-      'מע"מ לתשלום (הפרש)': vatToPayment.toFixed(2),
-      'רווח נקי': netProfit.toFixed(2),
-      'שולי רווח': profitPercent.toFixed(1) + '%'
-    });
 
     return {
       baseCost,
       shippingCost,
       additionalFees,
-      inputVAT,           // מע"מ תשומות
-      outputVAT,          // מע"מ עסקאות
-      vatToPayment,       // מע"מ לתשלום
-      totalProductCost,   // עלות מלאה
-      sellPriceWithVat,   // מחיר כולל מע"מ
-      sellPriceWithoutVat, // מחיר ללא מע"מ
-      netProfit,          // רווח נקי
-      profitPercent,      // שולי רווח
+      inputVAT,
+      outputVAT,
+      vatToPayment,
+      totalProductCost,
+      sellPriceWithVat,
+      sellPriceWithoutVat,
+      netProfit,
+      profitPercent,
       taxPercentValue
     };
   }, [baseCostIls, taxPercent, shippingCostIls, additionalFeesIls, priceIls]);
 
-  // Update mutation
+  // ✅ Clean Update Mutation - NO availability logic!
   const updateMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
+      console.log('🔵 [ProductEdit] Updating product data only (no availability changes)');
+
       if (isNew) {
-        return adminApi.createProduct(data);
+        return await adminApi.createProduct(data);
       } else {
-        return adminApi.updateProduct(params.id, data);
+        return await adminApi.updateProduct(params.id, data);
       }
     },
     onSuccess: () => {
       toast.success(isNew ? 'המוצר נוצר בהצלחה' : 'המוצר עודכן בהצלחה');
       queryClient.invalidateQueries(['admin', 'products']);
+      queryClient.invalidateQueries(['admin', 'products', 'inventory']);
       router.push('/admin/products');
     },
     onError: (error) => {
@@ -273,37 +233,20 @@ export default function ProductEditPage() {
   });
 
   const onSubmit = async (data) => {
-    // בדיקה אם יש לפחות לינק קניה אחד
     if (!hasPurchaseLink) {
       toast.error('חובה למלא לפחות לינק קניה אחד! (אמזון או ספק)');
       return;
     }
 
-    // Debug: בואו נראה מה נשלח
-    console.log('🔍 Submitting product with links:', {
-      amazonLink,
-      supplierUrlLink,
-      supplierUrl,
-      supplierName,
-      supplierNotes
-    });
-
     try {
-      // בדיקה אם יש תמונות חדשות שצריך להעלות
       const hasNewImages = (data.images || []).some(img => img.isNew && img.fileData);
-
       if (hasNewImages) {
         toast.info('מעלה תמונות לקלאודינרי...');
       }
 
-      // פונקציה לעיבוד תמונות (משותפת לתמונות מוצר ותמונות ווריאנטים)
       const processImage = async (image) => {
-        // אם זו תמונה חדשה (עם isNew), העלה לקלאודינרי
         if (image.isNew && image.fileData) {
           const response = await adminApi.uploadImage({ fileData: image.fileData });
-
-          // ה-axios interceptor מחזיר response.data ישירות, כך שהתשובה היא:
-          // { success: true, data: { url, publicId, ... }, message: '...' }
           if (response && response.success && response.data) {
             return {
               url: response.data.url,
@@ -312,19 +255,14 @@ export default function ProductEditPage() {
               isPrimary: image.isPrimary
             };
           } else {
-            console.error('העלאת תמונה נכשלה:', response);
             throw new Error('העלאת התמונה נכשלה');
           }
         }
 
-        // אם זה URL חיצוני או תמונה קיימת, השאר כמו שהיא
-        // אבל אל תשמור base64!
         if (image.url && image.url.startsWith('data:')) {
-          console.error('לא ניתן לשמור base64:', image.url.substring(0, 50));
-          throw new Error('לא ניתן לשמור תמונות base64 במסד הנתונים. יש לוודא שההעלאה לקלאודינרי הצליחה.');
+          throw new Error('לא ניתן לשמור תמונות base64 במסד הנתונים');
         }
 
-        console.log('משתמש בתמונה קיימת:', { url: image.url, publicId: image.publicId });
         return {
           url: image.url,
           publicId: image.publicId,
@@ -333,15 +271,12 @@ export default function ProductEditPage() {
         };
       };
 
-      // העלאת תמונות המוצר לקלאודינרי לפני שמירה
       const processedImages = await Promise.all(
         (data.images || []).map(processImage)
       );
 
-      // עיבוד ווריאנטים + העלאת תמונות הווריאנטים
       const processedVariants = await Promise.all(
         (data.variants || []).map(async (variant) => {
-          // הסרת _id אם הוא לא string תקין (למשל buffer object)
           const { _id, ...variantWithoutId } = variant;
           const cleanVariant = _id && typeof _id === 'string' ? variant : variantWithoutId;
 
@@ -358,7 +293,7 @@ export default function ProductEditPage() {
         })
       );
 
-      // Use useWatch values for all numeric/reactive fields
+      // ✅ Build product data WITHOUT stock.available field!
       const productData = {
         asin: data.asin,
         name_he: data.name_he,
@@ -395,9 +330,9 @@ export default function ProductEditPage() {
           notes: data['costBreakdown.notes']
         },
         stock: {
-          available: data['stock.available'],
+          // ❌ NO available field!
           quantity: data['stock.trackInventory'] ? parseInt(data['stock.quantity']) : null,
-          trackInventory: data['stock.trackInventory'],
+          trackInventory: data['stock.trackInventory'] === true,
           lowStockThreshold: parseInt(data['stock.lowStockThreshold']) || 5
         },
         shipping: {
@@ -424,16 +359,9 @@ export default function ProductEditPage() {
           affiliateUrl: data['links.affiliateUrl'] || '',
           supplierUrl: supplierUrlLink || ''
         },
-        status: data.status,
         featured: data.featured,
         images: processedImages
       };
-
-      // Debug: בואו נראה את כל הנתונים שנשלחים
-      console.log('📦 Final productData being sent:', {
-        supplier: productData.supplier,
-        links: productData.links
-      });
 
       updateMutation.mutate(productData);
     } catch (error) {
@@ -468,7 +396,7 @@ export default function ProductEditPage() {
               {isNew ? 'הוספת מוצר חדש' : 'עריכת מוצר'}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              המוצר יוצג בדיוק כפי שתראה בתצוגה החיה
+              עדכן פרטי מוצר, מחירים וווריאנטים
             </p>
           </div>
         </div>
@@ -490,7 +418,7 @@ export default function ProductEditPage() {
         </div>
       </div>
 
-      {/* לינק קניה מהיר - נראה רק אם יש לינק */}
+      {/* לינק קניה מהיר */}
       {!isNew && (formValues['links.amazon'] || formValues['links.supplierUrl'] || formValues['supplier.url']) && (
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -522,7 +450,7 @@ export default function ProductEditPage() {
         {/* Form */}
         <div className="space-y-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* קישורי קניה - חובה לפחות אחד */}
+            {/* קישורי קניה */}
             <div className={`rounded-lg border-2 p-6 transition-colors ${
               hasPurchaseLink
                 ? 'bg-white border-gray-200'
@@ -651,11 +579,6 @@ export default function ProductEditPage() {
                   <p className="text-xs text-gray-500 mt-1">
                     רק למוצרי אמזון - אופציונלי למוצרים מספקים אחרים
                   </p>
-                  {!isNew && formValues.asin && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      ⚠️ שים לב: שינוי ASIN משנה את זהות המוצר
-                    </p>
-                  )}
                   {errors.asin && (
                     <p className="text-sm text-red-600 mt-1">{errors.asin.message}</p>
                   )}
@@ -696,11 +619,6 @@ export default function ProductEditPage() {
                         </Link>
                       )}
                     </div>
-                    {categories.length === 0 && !categoriesLoading && (
-                      <p className="text-sm text-orange-600 mt-1">
-                        ⚠️ לא נמצאו קטגוריות. אנא צור קטגוריה חדשה תחילה.
-                      </p>
-                    )}
                     {errors.category && (
                       <p className="text-sm text-red-600 mt-1">{errors.category.message}</p>
                     )}
@@ -763,7 +681,7 @@ export default function ProductEditPage() {
                         : 'border-red-300 bg-red-50 focus:bg-white'
                     }`}
                     rows={5}
-                    placeholder="תיאור מפורט של המוצר, היתרונות שלו והמאפיינים הבולטים..."
+                    placeholder="תיאור מפורט של המוצר..."
                   />
                   {errors.description_he && (
                     <p className="text-sm text-red-600 mt-1">{errors.description_he.message}</p>
@@ -783,7 +701,7 @@ export default function ProductEditPage() {
                   />
                 </div>
 
-                {/* Tags with Smart Autocomplete */}
+                {/* Tags */}
                 <Controller
                   name="tags"
                   control={control}
@@ -883,7 +801,7 @@ export default function ProductEditPage() {
               </div>
             </div>
 
-            {/* פירוט עלויות Dropshipping */}
+            {/* פירוט עלויות */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
               <div className="flex items-center gap-2 mb-2">
                 <Calculator className="w-5 h-5 text-blue-600" />
@@ -896,8 +814,6 @@ export default function ProductEditPage() {
                     <p className="font-bold mb-1">חישוב מע&quot;מ עסקי חכם:</p>
                     <p className="leading-relaxed">
                       המערכת מחשבת רק את <span className="font-bold">הפרש המע&quot;מ</span> שצריך לשלם!
-                      כלומר: המע&quot;מ שגבית מהלקוח פחות המע&quot;מ ששילמת בייבוא.
-                      זה מוזיל משמעותית את העלות האמיתית שלך.
                     </p>
                   </div>
                 </div>
@@ -1021,16 +937,6 @@ export default function ProductEditPage() {
                   </div>
                 </div>
 
-                {/* הסבר שהמחשבון בצד */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200">
-                  <div className="flex items-center gap-3">
-                    <Calculator className="w-5 h-5 text-blue-600" />
-                    <p className="text-sm text-blue-800 font-medium">
-                      המחשבון מוצג בזמן אמת בצד ימין 👈
-                    </p>
-                  </div>
-                </div>
-
                 {/* הערות */}
                 <div>
                   <Label htmlFor="costBreakdown.notes">הערות על העלויות</Label>
@@ -1039,15 +945,15 @@ export default function ProductEditPage() {
                     {...register('costBreakdown.notes')}
                     className="mt-1 bg-white"
                     rows={3}
-                    placeholder="הערות פנימיות על העלויות, ספקים, תנאי תשלום וכו'"
+                    placeholder="הערות פנימיות על העלויות..."
                   />
                 </div>
               </div>
             </div>
 
-            {/* מלאי */}
+            {/* מלאי - ללא זמינות! */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold mb-4">מלאי (Dropshipping)</h2>
+              <h2 className="text-lg font-semibold mb-4">מעקב מלאי (Dropshipping)</h2>
 
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
@@ -1095,16 +1001,20 @@ export default function ProductEditPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="stock.available"
-                    {...register('stock.available')}
-                    className="rounded border-gray-300"
-                  />
-                  <Label htmlFor="stock.available" className="cursor-pointer">
-                    המוצר זמין
-                  </Label>
+                {/* הסבר על זמינות */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-semibold mb-1">💡 ניהול זמינות מוצר</p>
+                      <p className="mb-2">
+                        לעדכון זמינות (זמין/לא זמין) של מוצרים וווריאנטים, עבור לדף <Link href="/admin/inventory" className="font-bold underline">בדיקת זמינות</Link>
+                      </p>
+                      <p className="text-xs">
+                        שם תוכל לעדכן זמינות במערכת המרכזית שמסנכרנת אוטומטית עם הזמנות ועגלות
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1223,7 +1133,7 @@ export default function ProductEditPage() {
                   {...register('features')}
                   className="mt-1"
                   rows={6}
-                  placeholder="מעבד Intel Core i7&#10;זיכרון RAM 16GB&#10;כונן SSD 512GB&#10;מסך 13.3 אינץ' Full HD"
+                  placeholder="מעבד Intel Core i7&#10;זיכרון RAM 16GB&#10;כונן SSD 512GB"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   כל שורה תהפוך לנקודה בתצוגת התכונות
@@ -1240,6 +1150,7 @@ export default function ProductEditPage() {
                   <VariantManager
                     variants={field.value}
                     onChange={field.onChange}
+                    isNewProduct={isNew}
                   />
                 )}
               />
@@ -1278,42 +1189,26 @@ export default function ProductEditPage() {
                     {...register('supplier.notes')}
                     className="mt-1"
                     rows={3}
-                    placeholder="איש קשר: Sarah&#10;זמן אספקה: 7 ימים&#10;תנאי תשלום: NET30"
+                    placeholder="איש קשר: Sarah&#10;זמן אספקה: 7 ימים"
                   />
                 </div>
               </div>
             </div>
 
-            {/* הגדרות */}
+            {/* הגדרות - ללא status! */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h2 className="text-lg font-semibold mb-4">הגדרות</h2>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="status">סטטוס</Label>
-                  <select
-                    id="status"
-                    {...register('status')}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="active">פעיל</option>
-                    <option value="inactive">לא פעיל</option>
-                    <option value="out_of_stock">אזל מהמלאי</option>
-                    <option value="discontinued">הופסק</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2 mt-7">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    {...register('featured')}
-                    className="rounded border-gray-300"
-                  />
-                  <Label htmlFor="featured" className="cursor-pointer">
-                    מוצר מומלץ
-                  </Label>
-                </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="featured"
+                  {...register('featured')}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="featured" className="cursor-pointer">
+                  מוצר מומלץ
+                </Label>
               </div>
             </div>
 
@@ -1366,7 +1261,7 @@ export default function ProductEditPage() {
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-300 p-6 shadow-lg">
               <div className="flex items-center gap-2 mb-4 pb-4 border-b border-green-200">
                 <Calculator className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-green-900">מחשבון רווחיות מתוחכם</h3>
+                <h3 className="text-lg font-semibold text-green-900">מחשבון רווחיות</h3>
                 <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded font-bold">LIVE</span>
               </div>
 
@@ -1388,7 +1283,7 @@ export default function ProductEditPage() {
                       <span className="font-medium text-gray-900">₪{(costCalculation?.additionalFees || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-gray-200">
-                      <span className="text-gray-700 font-semibold">סה&quot;כ עלות מוצר:</span>
+                      <span className="text-gray-700 font-semibold">סה&quot;כ עלות:</span>
                       <span className="font-bold text-gray-900">₪{(costCalculation?.totalProductCost || 0).toFixed(2)}</span>
                     </div>
                   </div>
@@ -1402,21 +1297,15 @@ export default function ProductEditPage() {
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-blue-700">מע&quot;מ תשומות (ששילמתי):</span>
+                      <span className="text-blue-700">מע&quot;מ תשומות:</span>
                       <span className="font-medium text-blue-900">₪{(costCalculation?.inputVAT || 0).toFixed(2)}</span>
                     </div>
-                    <div className="text-xs text-blue-600 mb-2">
-                      על ({(costCalculation?.baseCost || 0).toFixed(2)} + {(costCalculation?.shippingCost || 0).toFixed(2)}) × {costCalculation?.taxPercentValue || 18}%
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-blue-300">
-                      <span className="text-blue-700">מע&quot;מ עסקאות (שגביתי):</span>
+                    <div className="flex justify-between">
+                      <span className="text-blue-700">מע&quot;מ עסקאות:</span>
                       <span className="font-medium text-blue-900">₪{(costCalculation?.outputVAT || 0).toFixed(2)}</span>
                     </div>
-                    <div className="text-xs text-blue-600 mb-2">
-                      המע&quot;מ הסמוי במחיר {(costCalculation?.sellPriceWithVat || 0).toFixed(2)} ש&quot;ח
-                    </div>
                     <div className="flex justify-between pt-2 border-t-2 border-blue-400">
-                      <span className="text-blue-800 font-bold">מע&quot;מ לתשלום (הפרש):</span>
+                      <span className="text-blue-800 font-bold">מע&quot;מ לתשלום:</span>
                       <span className={`font-bold ${(costCalculation?.vatToPayment || 0) >= 0 ? 'text-red-600' : 'text-green-600'}`}>
                         ₪{(costCalculation?.vatToPayment || 0).toFixed(2)}
                       </span>
@@ -1429,12 +1318,8 @@ export default function ProductEditPage() {
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">סיכום רווחיות</h4>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">מחיר מכירה (כולל מע&quot;מ):</span>
+                      <span className="text-gray-600">מחיר מכירה:</span>
                       <span className="font-bold text-blue-600">₪{(costCalculation?.sellPriceWithVat || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">הכנסה (ללא מע&quot;מ):</span>
-                      <span className="font-medium text-gray-900">₪{(costCalculation?.sellPriceWithoutVat || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-red-600">
                       <span>- עלות מוצר:</span>
@@ -1476,7 +1361,7 @@ export default function ProductEditPage() {
                   <p className="text-xs text-gray-700">
                     {(costCalculation?.profitPercent || 0) >= 30 ? 'שולי רווח מעולים למוצר dropshipping' :
                      (costCalculation?.profitPercent || 0) >= 20 ? 'שולי רווח סבירים' :
-                     (costCalculation?.profitPercent || 0) >= 10 ? 'שקול להעלות את המחיר או להוריד עלויות' :
+                     (costCalculation?.profitPercent || 0) >= 10 ? 'שקול להעלות את המחיר' :
                      'המוצר לא רווחי - יש לתקן את המחיר'}
                   </p>
                 </div>
@@ -1500,14 +1385,12 @@ export default function ProductEditPage() {
                 {primaryImage ? (
                   <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
                     {primaryImage.url.startsWith('data:') ? (
-                      // תמונת base64 - תצוגה מקדימה
                       <img
                         src={primaryImage.url}
                         alt={formValues.name_he || 'Product image'}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      // תמונה מ-URL חיצוני או Cloudinary
                       <Image
                         src={primaryImage.url}
                         alt={formValues.name_he || 'Product image'}
@@ -1556,65 +1439,6 @@ export default function ProductEditPage() {
                       </>
                     )}
                   </div>
-
-                  {/* Shipping */}
-                  <div className="mb-4 space-y-2">
-                    {formValues['shipping.freeShipping'] ? (
-                      <div className="inline-flex items-center gap-1 text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                        ✓ משלוח חינם
-                      </div>
-                    ) : formValues['shipping.cost'] > 0 && (
-                      <div className="text-sm text-gray-600">
-                        משלוח: ₪{parseFloat(formValues['shipping.cost']).toFixed(2)}
-                      </div>
-                    )}
-                    {formValues['shipping.estimatedDays'] && (
-                      <div className="text-sm text-gray-600">
-                        🚚 זמן אספקה: {formValues['shipping.estimatedDays']} ימי עסקים
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Stock Status */}
-                  <div className="mb-4">
-                    {formValues['stock.available'] ? (
-                      <span className="text-sm text-green-600">✓ במלאי</span>
-                    ) : (
-                      <span className="text-sm text-red-600">אזל מהמלאי</span>
-                    )}
-                    {formValues['stock.trackInventory'] && formValues['stock.quantity'] && (
-                      <span className="text-sm text-gray-500 mr-2">
-                        ({formValues['stock.quantity']} יחידות)
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Specifications */}
-                  {(formValues['specifications.brand'] || formValues['specifications.model']) && (
-                    <div className="border-t border-gray-200 pt-4 mt-4">
-                      <h4 className="font-semibold text-sm mb-2">מפרט</h4>
-                      <dl className="text-sm space-y-1">
-                        {formValues['specifications.brand'] && (
-                          <div className="flex justify-between">
-                            <dt className="text-gray-600">מותג:</dt>
-                            <dd className="font-medium">{formValues['specifications.brand']}</dd>
-                          </div>
-                        )}
-                        {formValues['specifications.model'] && (
-                          <div className="flex justify-between">
-                            <dt className="text-gray-600">דגם:</dt>
-                            <dd className="font-medium">{formValues['specifications.model']}</dd>
-                          </div>
-                        )}
-                        {formValues['specifications.color'] && (
-                          <div className="flex justify-between">
-                            <dt className="text-gray-600">צבע:</dt>
-                            <dd className="font-medium">{formValues['specifications.color']}</dd>
-                          </div>
-                        )}
-                      </dl>
-                    </div>
-                  )}
 
                   {/* Features */}
                   {formValues.features && (

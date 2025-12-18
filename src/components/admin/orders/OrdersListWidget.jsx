@@ -5,17 +5,25 @@ import { adminApi } from '@/lib/api/admin';
 import OrderCompactCard from './OrderCompactCard';
 import { Loader2 } from 'lucide-react';
 
-export default function OrdersListWidget({ activeFilter, onQuickAction }) {
+export default function OrdersListWidget({ activeFilter, searchTerm, onQuickAction }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['admin', 'orders', 'filtered', activeFilter],
+    queryKey: ['admin', 'orders', 'filtered', activeFilter, searchTerm],
     queryFn: async () => {
-      const response = await adminApi.getOrdersFiltered({
+      const params = {
         filter: activeFilter,
         limit: 50
-      });
+      };
+
+      // הוסף חיפוש אם קיים
+      if (searchTerm && searchTerm.trim()) {
+        params.search = searchTerm.trim();
+      }
+
+      const response = await adminApi.getOrdersFiltered(params);
       return response.data;
     },
-    refetchInterval: 60000 // כל דקה
+    refetchInterval: 60000, // כל דקה
+    enabled: true // תמיד enabled, גם עם חיפוש
   });
 
   const orders = data?.orders || [];
@@ -56,7 +64,14 @@ export default function OrdersListWidget({ activeFilter, onQuickAction }) {
       {/* Orders List */}
       {!isLoading && orders.length === 0 && (
         <div className="text-center py-12 text-neutral-600">
-          <p>לא נמצאו הזמנות</p>
+          {searchTerm ? (
+            <>
+              <p className="font-medium">לא נמצאו תוצאות לחיפוש</p>
+              <p className="text-sm mt-2">נסה לחפש במילים אחרות או בדוק את האיות</p>
+            </>
+          ) : (
+            <p>לא נמצאו הזמנות</p>
+          )}
         </div>
       )}
 

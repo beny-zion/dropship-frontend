@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin';
 import ProductInventoryCard from '@/components/admin/inventory/ProductInventoryCard';
@@ -10,35 +10,14 @@ import { Button } from '@/components/ui/button';
 export default function InventoryCheckPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [checkedCount, setCheckedCount] = useState(0);
   const limit = 20;
 
-  // Count checked products from localStorage
-  useEffect(() => {
-    const updateCheckedCount = () => {
-      let count = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('inventory-check-')) {
-          count++;
-        }
-      }
-      setCheckedCount(count);
-    };
-
-    updateCheckedCount();
-
-    // Update count when storage changes
-    window.addEventListener('storage', updateCheckedCount);
-
-    // Poll for updates (since localStorage events don't fire in same tab)
-    const interval = setInterval(updateCheckedCount, 2000);
-
-    return () => {
-      window.removeEventListener('storage', updateCheckedCount);
-      clearInterval(interval);
-    };
-  }, []);
+  // Fetch checked count from server (per page)
+  // Count how many products in current page have been checked
+  const getCheckedCountFromProducts = (products) => {
+    if (!products || products.length === 0) return 0;
+    return products.filter(p => p.inventoryChecks?.lastChecked).length;
+  };
 
   // שליפת מוצרים עם pagination
   const { data: apiResponse, isLoading, error } = useQuery({
@@ -81,6 +60,7 @@ export default function InventoryCheckPage() {
   // סטטיסטיקות זמינות
   const availableCount = products.filter(p => p.stock?.available).length;
   const unavailableCount = products.filter(p => !p.stock?.available).length;
+  const checkedCount = getCheckedCountFromProducts(products);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -110,10 +90,10 @@ export default function InventoryCheckPage() {
           <p className="text-3xl font-bold text-purple-900">{currentPage} / {totalPages}</p>
         </div>
         <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4">
-          <p className="text-sm text-amber-700 font-medium mb-1">✓ נבדקו</p>
+          <p className="text-sm text-amber-700 font-medium mb-1">✓ נבדקו בעמוד</p>
           <p className="text-3xl font-bold text-amber-900">{checkedCount}</p>
           <p className="text-xs text-amber-600 mt-1">
-            {totalProducts > 0 ? `${Math.round((checkedCount / totalProducts) * 100)}% מהכל` : '0%'}
+            {products.length > 0 ? `${Math.round((checkedCount / products.length) * 100)}% מהעמוד` : '0%'}
           </p>
         </div>
         <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">

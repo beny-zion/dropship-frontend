@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { getOrderById } from '@/lib/api/orders';
 import { useStatusConfig } from '@/lib/hooks/useOrderStatuses';
+import { PaymentStatusBadge } from '@/components/orders/PaymentStatusBadge';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useReactToPrint } from 'react-to-print';
@@ -181,63 +182,180 @@ export default function OrderDetailsPage() {
             </div>
           </div>
 
+          {/* Payment Status Section */}
+          {order.payment && (
+            <div className="border border-neutral-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-normal tracking-wide">מצב תשלום</h2>
+                <PaymentStatusBadge
+                  status={order.payment.status}
+                  amount={order.payment.chargedAmount || order.payment.holdAmount}
+                />
+              </div>
+
+              {/* Payment Status Explanation */}
+              {order.payment.status === 'hold' && (
+                <div className="bg-blue-50 border border-blue-200 p-4">
+                  <p className="font-medium text-blue-900 mb-2">
+                    💳 מסגרת אשראי נתפסה
+                  </p>
+                  <p className="text-sm text-blue-800 font-light">
+                    תפסנו מסגרת של ₪{order.payment.holdAmount?.toFixed(0)} בכרטיס האשראי שלך.
+                    <br />
+                    החיוב בפועל יתבצע רק לאחר שנזמין את המוצרים מהספקים.
+                  </p>
+                  {order.payment.holdAt && (
+                    <p className="text-xs text-blue-700 mt-2">
+                      תאריך תפיסה: {new Date(order.payment.holdAt).toLocaleString('he-IL')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {order.payment.status === 'ready_to_charge' && (
+                <div className="bg-yellow-50 border border-yellow-200 p-4">
+                  <p className="font-medium text-yellow-900 mb-2">
+                    ⏳ מוכן לחיוב
+                  </p>
+                  <p className="text-sm text-yellow-800 font-light">
+                    כל הפריטים הוכרעו. החיוב יתבצע בקרוב.
+                  </p>
+                </div>
+              )}
+
+              {order.payment.status === 'charged' && (
+                <div className="bg-green-50 border border-green-200 p-4">
+                  <p className="font-medium text-green-900 mb-2">
+                    ✅ חויב בהצלחה
+                  </p>
+                  <p className="text-sm text-green-800 font-light">
+                    חויבת ב-₪{order.payment.chargedAmount?.toFixed(0)} ב-
+                    {order.payment.chargedAt && new Date(order.payment.chargedAt).toLocaleDateString('he-IL')}
+                  </p>
+                  {order.payment.hypTransactionId && (
+                    <p className="text-xs text-green-700 mt-2">
+                      מספר עסקה: {order.payment.hypTransactionId}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {order.payment.status === 'cancelled' && (
+                <div className="bg-red-50 border border-red-200 p-4">
+                  <p className="font-medium text-red-900 mb-2">
+                    ❌ העסקה בוטלה
+                  </p>
+                  <p className="text-sm text-red-800 font-light">
+                    המסגרת שוחררה והסכום לא חויב.
+                  </p>
+                </div>
+              )}
+
+              {order.payment.status === 'failed' && (
+                <div className="bg-red-50 border border-red-200 p-4">
+                  <p className="font-medium text-red-900 mb-2">
+                    ⚠️ התשלום נכשל
+                  </p>
+                  <p className="text-sm text-red-800 font-light">
+                    אנא צור קשר לתיאום תשלום חלופי.
+                  </p>
+                  {order.payment.lastError && (
+                    <p className="text-xs text-red-700 mt-2">
+                      שגיאה: {order.payment.lastError}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {order.payment.status === 'pending' && (
+                <div className="bg-gray-50 border border-gray-200 p-4">
+                  <p className="font-medium text-gray-900 mb-2">
+                    ⏱️ ממתין לתשלום
+                  </p>
+                  <p className="text-sm text-gray-800 font-light">
+                    ההזמנה ממתינה לאישור תשלום.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Order Items */}
           <div className="border border-neutral-200 p-6">
             <h2 className="text-lg font-normal tracking-wide mb-6">פריטים בהזמנה</h2>
             <div className="space-y-6">
-              {order.items.map((item, idx) => (
-                <div key={`${item.product._id || item.product.id}-${item.variantSku || 'base'}-${idx}`} className="flex gap-4 pb-6 border-b border-neutral-200 last:border-0 last:pb-0">
-                  <div className="relative h-20 w-20 bg-neutral-50 border border-neutral-200 flex-shrink-0 flex items-center justify-center">
-                    {item.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="object-contain p-2 w-full h-full"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<div class="text-xs text-neutral-400">אין תמונה</div>';
-                        }}
-                      />
-                    ) : (
-                      <div className="text-xs text-neutral-400">אין תמונה</div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <Link
-                      href={`/products/${item.product.slug || item.product._id}`}
-                      className="font-light hover:opacity-70 transition-opacity print:no-underline print:text-black"
-                    >
-                      {item.name}
-                    </Link>
+              {order.items.map((item, idx) => {
+                const isCancelled = item.cancellation?.cancelled;
 
-                    {/* Variant Details */}
-                    {item.variantDetails && (
-                      <div className="flex gap-2 mt-2">
-                        {item.variantDetails.color && (
-                          <span className="text-xs font-light text-neutral-600">
-                            צבע: {item.variantDetails.color}
-                          </span>
-                        )}
-                        {item.variantDetails.size && (
-                          <span className="text-xs font-light text-neutral-600">
-                            מידה: {item.variantDetails.size}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                return (
+                  <div key={`${item.product._id || item.product.id}-${item.variantSku || 'base'}-${idx}`} className={`flex gap-4 pb-6 border-b border-neutral-200 last:border-0 last:pb-0 ${isCancelled ? 'opacity-60' : ''}`}>
+                    <div className={`relative h-20 w-20 bg-neutral-50 border flex-shrink-0 flex items-center justify-center ${isCancelled ? 'border-red-200 bg-red-50' : 'border-neutral-200'}`}>
+                      {item.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="object-contain p-2 w-full h-full"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<div class="text-xs text-neutral-400">אין תמונה</div>';
+                          }}
+                        />
+                      ) : (
+                        <div className="text-xs text-neutral-400">אין תמונה</div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Link
+                        href={`/products/${item.product.slug || item.product._id}`}
+                        className={`font-light hover:opacity-70 transition-opacity print:no-underline print:text-black ${isCancelled ? 'line-through text-neutral-400' : ''}`}
+                      >
+                        {item.name}
+                      </Link>
 
-                    <p className="text-sm font-light text-neutral-600 mt-2">
-                      כמות: {item.quantity} × ₪{item.price.toFixed(0)}
-                    </p>
+                      {/* Variant Details */}
+                      {item.variantDetails && (
+                        <div className="flex gap-2 mt-2">
+                          {item.variantDetails.color && (
+                            <span className="text-xs font-light text-neutral-600">
+                              צבע: {item.variantDetails.color}
+                            </span>
+                          )}
+                          {item.variantDetails.size && (
+                            <span className="text-xs font-light text-neutral-600">
+                              מידה: {item.variantDetails.size}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <p className={`text-sm font-light mt-2 ${isCancelled ? 'text-neutral-400 line-through' : 'text-neutral-600'}`}>
+                        כמות: {item.quantity} × ₪{item.price.toFixed(0)}
+                      </p>
+
+                      {/* Cancellation Notice */}
+                      {isCancelled && (
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                          <p className="text-sm font-medium text-red-900">
+                            ❌ פריט זה בוטל
+                          </p>
+                          <p className="text-xs text-red-700 mt-1">
+                            סיבה: {item.cancellation.reason}
+                          </p>
+                          <p className="text-xs text-red-600 mt-1 font-light">
+                            סכום זה לא יחוייב
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-left">
+                      <p className={`font-normal text-lg ${isCancelled ? 'line-through text-neutral-400' : ''}`}>
+                        ₪{(item.price * item.quantity).toFixed(0)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="font-normal text-lg">
-                      ₪{(item.price * item.quantity).toFixed(0)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -306,27 +424,88 @@ export default function OrderDetailsPage() {
           <div className="border border-neutral-200 p-6">
             <h2 className="text-lg font-normal tracking-wide mb-6">סיכום הזמנה</h2>
             <div className="space-y-3">
-              <div className="flex justify-between text-sm font-light">
-                <span className="text-neutral-600">סכום ביניים:</span>
-                <span className="font-normal">₪{order.pricing.subtotal.toFixed(0)}</span>
-              </div>
-              <div className="flex justify-between text-xs font-light text-neutral-500 pr-4">
-                <span>כולל מע״מ (18%):</span>
-                <span>₪{order.pricing.tax.toFixed(0)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-light">
-                <span className="text-neutral-600">משלוח:</span>
-                {order.pricing.shipping === 0 ? (
-                  <span className="font-normal">חינם</span>
-                ) : (
-                  <span className="font-normal">₪{order.pricing.shipping.toFixed(0)}</span>
-                )}
-              </div>
-              <div className="border-t border-neutral-200 pt-3 mt-3" />
-              <div className="flex justify-between text-xl font-normal">
-                <span>סה״כ:</span>
-                <span>₪{order.pricing.total.toFixed(0)}</span>
-              </div>
+              {/* אם יש ביטולים - הצג את הסכומים המקוריים והמתוקנים */}
+              {order.pricing.adjustedTotal !== undefined && order.pricing.adjustedTotal !== order.pricing.total ? (
+                <>
+                  <div className="flex justify-between text-sm font-light text-neutral-400">
+                    <span className="line-through">סכום מקורי:</span>
+                    <span className="line-through">₪{order.pricing.subtotal.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-light text-neutral-400 pr-4">
+                    <span className="line-through text-xs">מתוכם מע״מ (18%):</span>
+                    <span className="line-through text-xs">₪{order.pricing.tax.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-light text-neutral-400">
+                    <span className="line-through">משלוח מקורי:</span>
+                    <span className="line-through">₪{order.pricing.shipping.toFixed(0)}</span>
+                  </div>
+
+                  <div className="border-t border-neutral-300 my-3" />
+
+                  <div className="flex justify-between text-sm font-light">
+                    <span className="text-neutral-600">סכום פריטים פעילים:</span>
+                    <span className="font-normal">₪{(order.pricing.adjustedSubtotal || 0).toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-light text-neutral-500 pr-4">
+                    <span>מתוכם מע״מ (18%):</span>
+                    <span>₪{(order.pricing.adjustedTax || 0).toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-light">
+                    <span className="text-neutral-600">משלוח:</span>
+                    {(order.pricing.adjustedShipping || 0) === 0 ? (
+                      <span className="font-normal text-green-600">בוטל - חינם</span>
+                    ) : (
+                      <span className="font-normal">₪{(order.pricing.adjustedShipping || 0).toFixed(0)}</span>
+                    )}
+                  </div>
+
+                  <div className="border-t border-neutral-200 pt-3 mt-3" />
+
+                  <div className="flex justify-between text-sm font-light text-neutral-500">
+                    <span className="line-through">סה״כ מקורי:</span>
+                    <span className="line-through">₪{order.pricing.total.toFixed(0)}</span>
+                  </div>
+
+                  <div className="flex justify-between text-xl font-bold text-green-700">
+                    <span>סה״כ לחיוב:</span>
+                    <span>₪{(order.pricing.adjustedTotal || 0).toFixed(0)}</span>
+                  </div>
+
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                    <p className="text-xs text-green-800 font-light">
+                      💰 תחויב רק ₪{(order.pricing.adjustedTotal || 0).toFixed(0)} במקום ₪{order.pricing.total.toFixed(0)}
+                    </p>
+                    <p className="text-xs text-green-700 mt-1 font-light">
+                      חסכת: ₪{(order.pricing.total - (order.pricing.adjustedTotal || 0)).toFixed(0)}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* הצגה רגילה ללא ביטולים */}
+                  <div className="flex justify-between text-sm font-light">
+                    <span className="text-neutral-600">סכום ביניים:</span>
+                    <span className="font-normal">₪{order.pricing.subtotal.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-light text-neutral-500 pr-4">
+                    <span>מתוכם מע״מ (18%):</span>
+                    <span>₪{order.pricing.tax.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-light">
+                    <span className="text-neutral-600">משלוח:</span>
+                    {order.pricing.shipping === 0 ? (
+                      <span className="font-normal">חינם</span>
+                    ) : (
+                      <span className="font-normal">₪{order.pricing.shipping.toFixed(0)}</span>
+                    )}
+                  </div>
+                  <div className="border-t border-neutral-200 pt-3 mt-3" />
+                  <div className="flex justify-between text-xl font-normal">
+                    <span>סה״כ:</span>
+                    <span>₪{order.pricing.total.toFixed(0)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

@@ -1,4 +1,6 @@
 // app/admin/orders/[id]/page.jsx - Enhanced Order Detail Page with Item Management
+//
+// ✅ זה הקובץ המשודרג - להחליף את page.jsx הקיים
 
 'use client';
 
@@ -18,16 +20,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { sanitizeHTML } from '@/lib/utils/sanitize';
-import SafeText from '@/components/ui/SafeText';
 
 // ✅ ייבוא הקומפוננטות החדשות
 import ItemStatusBadge from '@/components/admin/orders/ItemStatusBadge';
-import UpdateStatusModal from '@/components/admin/orders/UpdateStatusModal';
+import ItemStatusSelector from '@/components/admin/orders/ItemStatusSelector';
 import OrderFromSupplierModal from '@/components/admin/orders/OrderFromSupplierModal';
 import CancelItemModal from '@/components/admin/orders/CancelItemModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
-import ItemHistoryModal from '@/components/admin/orders/ItemHistoryModal';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
   updateItemStatus,
@@ -56,8 +55,7 @@ export default function OrderDetailPage() {
   // ✅ מצב למודלים
   const [orderSupplierModal, setOrderSupplierModal] = useState(null);
   const [cancelModal, setCancelModal] = useState(null);
-  const [historyModal, setHistoryModal] = useState(null);
-  const [updateStatusModal, setUpdateStatusModal] = useState(null);
+  const [statusSuggestion, setStatusSuggestion] = useState(null);
 
   // Fetch order
   const { data, isLoading } = useQuery({
@@ -70,112 +68,31 @@ export default function OrderDetailPage() {
   // ✅ Mutation להזמנה מספק
   const orderFromSupplierMutation = useMutation({
     mutationFn: ({ itemId, data }) => orderItemFromSupplier(params.id, itemId, data),
-    onSuccess: (response) => {
-      // ✅ התגובה היא { success: true, data: {...} }
-      const data = response.data || response;
-
-      toast.success(data.message || 'הפריט הוזמן בהצלחה מהספק');
+    onSuccess: () => {
+      toast.success('הפריט הוזמן בהצלחה מהספק');
       queryClient.invalidateQueries(['admin', 'order', params.id]);
       setOrderSupplierModal(null);
-
-      // בדוק אם יש הצעה לעדכון סטטוס ראשי
-      const suggestion = data?.orderStatusSuggestion;
-      console.log('📦 Order From Supplier Response:', {
-        fullResponse: response,
-        data,
-        suggestion,
-        hasSuggestion: !!suggestion,
-        hasMessage: !!suggestion?.message
-      });
-
-      if (suggestion && suggestion.message) {
-        toast(suggestion.message, {
-          duration: 10000,
-          action: {
-            label: 'עדכן עכשיו',
-            onClick: () => {
-              updateOrderStatusMutation.mutate(suggestion.suggestedStatus);
-            }
-          }
-        });
-      }
     },
     onError: (error) => {
-      const errorData = error.data || error.response?.data;
-      const errorMsg = errorData?.message || 'שגיאה בהזמנה מספק';
-      const errorDetails = errorData?.error;
-
-      if (errorDetails) {
-        toast.error(errorMsg, {
-          description: `פרטים: ${errorDetails}`,
-          duration: 6000
-        });
-      } else {
-        toast.error(errorMsg, { duration: 6000 });
-      }
+      toast.error(error.response?.data?.message || 'שגיאה בהזמנה מספק');
     }
   });
 
-  // ✅ Mutation לעדכון סטטוס ראשי של ההזמנה
-  const updateOrderStatusMutation = useMutation({
-    mutationFn: (newStatus) => adminApi.updateOrderStatus(params.id, newStatus),
-    onSuccess: () => {
-      toast.success('סטטוס ההזמנה עודכן בהצלחה!');
-      queryClient.invalidateQueries(['admin', 'order', params.id]);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'שגיאה בעדכון סטטוס ההזמנה');
-    }
-  });
-
-  // ✅ Mutation לעדכון סטטוס פריט
+  // ✅ Mutation לעדכון סטטוס
   const updateStatusMutation = useMutation({
-    mutationFn: ({ itemId, newStatus, notes }) => updateItemStatus(params.id, itemId, newStatus, notes),
+    mutationFn: ({ itemId, newStatus }) => updateItemStatus(params.id, itemId, newStatus),
     onSuccess: (response) => {
-      // ✅ התגובה היא { success: true, data: {...} }
-      const data = response.data || response;
+      toast.success('הסטטוס עודכן בהצלחה');
 
-      console.log('📊 Status Update Response:', {
-        fullResponse: response,
-        data,
-        message: data?.message,
-        orderStatusSuggestion: data?.orderStatusSuggestion
-      });
-
-      toast.success(data.message || 'הסטטוס עודכן בהצלחה');
-      queryClient.invalidateQueries(['admin', 'order', params.id]);
-      setUpdateStatusModal(null);
-
-      // בדוק אם יש הצעה לעדכון סטטוס ראשי
-      const suggestion = data?.orderStatusSuggestion;
-
-      if (suggestion && suggestion.message) {
-        // הצג toast עם כפתור לעדכון מהיר
-        toast(suggestion.message, {
-          duration: 10000,
-          action: {
-            label: 'עדכן עכשיו',
-            onClick: () => {
-              updateOrderStatusMutation.mutate(suggestion.suggestedStatus);
-            }
-          }
-        });
+      // שמור הצעת עדכון סטטוס
+      if (response.data?.data?.orderStatusSuggestion) {
+        setStatusSuggestion(response.data.data.orderStatusSuggestion);
       }
+
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
     },
     onError: (error) => {
-      // הנתונים נמצאים ישירות ב-error.data (לא ב-error.response.data)
-      const errorData = error.data || error.response?.data;
-
-      // אם יש מידע מפורט על הסטטוסים המותרים
-      if (errorData?.allowedTransitions && errorData.allowedTransitions.length > 0) {
-        const allowedList = errorData.allowedTransitions.map(t => t.label).join(', ');
-        toast.error(errorData.message, {
-          description: `סטטוסים מותרים: ${allowedList}`,
-          duration: 8000
-        });
-      } else {
-        toast.error(errorData?.message || 'שגיאה בעדכון הסטטוס');
-      }
+      toast.error(error.response?.data?.message || 'שגיאה בעדכון הסטטוס');
     }
   });
 
@@ -183,55 +100,49 @@ export default function OrderDetailPage() {
   const cancelItemMutation = useMutation({
     mutationFn: ({ itemId, reason }) => cancelOrderItem(params.id, itemId, reason),
     onSuccess: (response) => {
-      // ✅ התגובה היא { success: true, data: {...} }
-      const data = response.data || response;
+      // Handle both nested and direct data structure
+      const data = response?.data?.data || response?.data;
 
-      console.log('🗑️ Cancel Item Response:', {
-        fullResponse: response,
-        data,
-        message: data?.message,
-        orderUpdate: data?.orderUpdate
-      });
+      console.log('Cancel item response:', response.data);
 
-      toast.success(data.message || 'הפריט בוטל בהצלחה');
+      toast.success(data?.message || 'הפריט בוטל בהצלחה');
 
       // הצג אזהרה אם לא עומד במינימום
-      if (data.orderUpdate && !data.orderUpdate.meetsMinimum) {
+      if (data?.orderUpdate && !data.orderUpdate.meetsMinimum) {
         toast.warning('שים לב: ההזמנה לא עומדת במינימום!', {
           duration: 5000
         });
       }
 
-      // בדוק אם יש הצעה לעדכון סטטוס ראשי
-      const suggestion = data.orderStatusSuggestion;
-      if (suggestion && suggestion.message) {
-        toast(suggestion.message, {
-          duration: 10000,
-          action: {
-            label: 'עדכן עכשיו',
-            onClick: () => {
-              updateOrderStatusMutation.mutate(suggestion.suggestedStatus);
-            }
-          }
-        });
+      // שמור הצעת עדכון סטטוס - תומך בשני מבנים אפשריים
+      const suggestion = data?.orderStatusSuggestion || response?.data?.orderStatusSuggestion;
+      if (suggestion) {
+        // אם זה אובייקט עם מבנה מלא, המר אותו לטקסט
+        if (typeof suggestion === 'object' && suggestion.message) {
+          setStatusSuggestion(suggestion.message);
+        } else if (typeof suggestion === 'string') {
+          setStatusSuggestion(suggestion);
+        }
       }
 
       queryClient.invalidateQueries(['admin', 'order', params.id]);
       setCancelModal(null);
     },
     onError: (error) => {
-      const errorData = error.data || error.response?.data;
-      const errorMsg = errorData?.message || 'שגיאה בביטול הפריט';
-      const errorDetails = errorData?.error;
+      toast.error(error.response?.data?.message || 'שגיאה בביטול הפריט');
+    }
+  });
 
-      if (errorDetails) {
-        toast.error(errorMsg, {
-          description: `פרטים: ${errorDetails}`,
-          duration: 6000
-        });
-      } else {
-        toast.error(errorMsg, { duration: 6000 });
-      }
+  // ✅ Mutation לעדכון סטטוס ראשי
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: (newStatus) => adminApi.updateOrderStatus(params.id, newStatus),
+    onSuccess: () => {
+      toast.success('סטטוס ההזמנה עודכן בהצלחה');
+      setStatusSuggestion(null);
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'שגיאה בעדכון סטטוס ההזמנה');
     }
   });
 
@@ -243,21 +154,9 @@ export default function OrderDetailPage() {
     setCancelModal(item);
   };
 
-  const handleShowHistory = (item) => {
-    setHistoryModal(item);
-  };
-
-  const handleUpdateStatus = (item) => {
-    setUpdateStatusModal(item);
-  };
-
-  const handleStatusChange = (newStatus, notes) => {
-    if (newStatus && updateStatusModal) {
-      updateStatusMutation.mutate({
-        itemId: updateStatusModal._id,
-        newStatus,
-        notes
-      });
+  const handleStatusChange = (itemId, newStatus) => {
+    if (newStatus) {
+      updateStatusMutation.mutate({ itemId, newStatus });
     }
   };
 
@@ -302,21 +201,17 @@ export default function OrderDetailPage() {
           <Badge className={statusConfig[order.status]?.className + ' text-base px-4 py-2'}>
             {statusConfig[order.status]?.label || order.status}
           </Badge>
-
           <select
             value={order.status}
             onChange={(e) => {
-              if (e.target.value !== order.status) {
-                if (confirm(`האם לעדכן את סטטוס ההזמנה ל"${statusConfig[e.target.value]?.label}"?`)) {
-                  updateOrderStatusMutation.mutate(e.target.value);
-                }
+              if (window.confirm(`האם לעדכן את סטטוס ההזמנה ל-${statusConfig[e.target.value]?.label}?`)) {
+                updateOrderStatusMutation.mutate(e.target.value);
               }
             }}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:outline-none"
+            className="text-sm border border-gray-300 rounded px-3 py-1.5 focus:border-blue-500 focus:outline-none"
           >
-            <option value="">שנה סטטוס...</option>
-            {Object.entries(statusConfig).map(([key, config]) => (
-              <option key={key} value={key}>
+            {Object.entries(statusConfig).map(([value, config]) => (
+              <option key={value} value={value}>
                 {config.label}
               </option>
             ))}
@@ -326,6 +221,58 @@ export default function OrderDetailPage() {
 
       {/* ✅ אזהרת מינימום */}
       <OrderMinimumWarning order={order} />
+
+      {/* ✅ הצעת עדכון סטטוס */}
+      {statusSuggestion && (
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <Package className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-blue-900">הצעה לעדכון סטטוס הזמנה</h3>
+                <p className="text-sm text-blue-700 mt-1">{statusSuggestion}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  // חלץ את הסטטוס החדש מההודעה
+                  const match = statusSuggestion.match(/ל-'(.+?)'/);
+                  if (match && match[1]) {
+                    const statusMap = {
+                      'ממתין לאישור': 'pending',
+                      'מסגרת אשראי תפוסה': 'payment_hold',
+                      'הוזמן מארה"ב': 'ordered',
+                      'הגיע למחסן ארה"ב': 'arrived_us_warehouse',
+                      'נשלח לישראל': 'shipped_to_israel',
+                      'במכס בישראל': 'customs_israel',
+                      'הגיע למחסן בישראל': 'arrived_israel_warehouse',
+                      'נשלח ללקוח': 'shipped_to_customer',
+                      'נמסר': 'delivered',
+                      'בוטל': 'cancelled'
+                    };
+                    const newStatus = statusMap[match[1]];
+                    if (newStatus) {
+                      updateOrderStatusMutation.mutate(newStatus);
+                    }
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                עדכן עכשיו
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setStatusSuggestion(null)}
+              >
+                התעלם
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -340,13 +287,13 @@ export default function OrderDetailPage() {
             </div>
 
             <div className="space-y-6">
-              {order.items?.map((item) => {
+              {order.items?.map((item, idx) => {
                 const isCancelled = item.cancellation?.cancelled;
                 const isPending = item.itemStatus === ITEM_STATUS.PENDING;
 
                 return (
                   <div
-                    key={item._id}
+                    key={item._id || `item-${idx}`}
                     className={`border border-gray-200 p-4 rounded ${isCancelled ? 'bg-red-50 opacity-75' : 'bg-white'
                       }`}
                   >
@@ -362,21 +309,21 @@ export default function OrderDetailPage() {
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div>
-                            <SafeText as="p" className="font-medium text-gray-900">
+                            <p className="font-medium text-gray-900">
                               {item.name}
-                            </SafeText>
+                            </p>
 
                             {/* Variant Details */}
                             {item.variantDetails && (
                               <div className="flex gap-2 mt-1">
                                 {item.variantDetails.color && (
                                   <Badge variant="outline" className="text-xs">
-                                    <SafeText>{item.variantDetails.color}</SafeText>
+                                    {item.variantDetails.color}
                                   </Badge>
                                 )}
                                 {item.variantDetails.size && (
                                   <Badge variant="outline" className="text-xs">
-                                    <SafeText>{item.variantDetails.size}</SafeText>
+                                    {item.variantDetails.size}
                                   </Badge>
                                 )}
                               </div>
@@ -388,7 +335,7 @@ export default function OrderDetailPage() {
 
                             {item.supplierName && (
                               <p className="text-xs text-gray-400 mt-1">
-                                ספק: <SafeText>{item.supplierName}</SafeText>
+                                ספק: {item.supplierName}
                               </p>
                             )}
                           </div>
@@ -404,7 +351,7 @@ export default function OrderDetailPage() {
                               ❌ פריט בוטל
                             </p>
                             <p className="text-xs text-red-700 mt-1">
-                              סיבה: <SafeText>{item.cancellation.reason}</SafeText>
+                              סיבה: {item.cancellation.reason}
                             </p>
                             <p className="text-xs text-red-700">
                               החזר: ₪{item.cancellation.refundAmount}
@@ -447,16 +394,13 @@ export default function OrderDetailPage() {
                           </Button>
                         )}
 
-                        {/* Update Status Button */}
+                        {/* Status Selector */}
                         {!isPending && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateStatus(item)}
+                          <ItemStatusSelector
+                            currentStatus={item.itemStatus}
+                            onSelect={(newStatus) => handleStatusChange(item._id, newStatus)}
                             disabled={updateStatusMutation.isPending}
-                          >
-                            עדכן סטטוס
-                          </Button>
+                          />
                         )}
 
                         {/* Supplier Link */}
@@ -470,15 +414,6 @@ export default function OrderDetailPage() {
                             <ExternalLink className="w-3 h-3 mr-2" />
                           </Button>
                         )}
-
-                        {/* History Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleShowHistory(item)}
-                        >
-                          היסטוריה
-                        </Button>
 
                         {/* Cancel Item Button */}
                         <Button
@@ -498,39 +433,90 @@ export default function OrderDetailPage() {
 
             {/* ✅ Pricing Summary with Refunds */}
             <div className="mt-6 pt-6 border-t-2 border-gray-300 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">סכום ביניים:</span>
-                <span>₪{order.pricing?.subtotal?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">משלוח:</span>
-                {order.pricing?.shipping === 0 ? (
-                  <span className="text-green-600 font-medium">חינם 🎉</span>
-                ) : (
-                  <span>₪{order.pricing?.shipping?.toLocaleString()}</span>
-                )}
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">מע"מ:</span>
-                <span>₪{order.pricing?.tax?.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-medium pt-2 border-t border-gray-200">
-                <span className="text-gray-600">סכום מקורי:</span>
-                <span>₪{order.pricing?.total?.toLocaleString()}</span>
-              </div>
-              {order.pricing?.totalRefunds > 0 && (
-                <div className="flex justify-between text-sm text-red-600">
-                  <span>סה"כ החזרים:</span>
-                  <span>-₪{order.pricing?.totalRefunds?.toLocaleString()}</span>
-                </div>
+              {order.pricing?.adjustedTotal !== undefined && order.pricing?.adjustedTotal !== order.pricing?.total ? (
+                <>
+                  {/* יש ביטולים - הצגה מפורטת */}
+                  <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-2">סכומים מקוריים:</p>
+                    <div className="flex justify-between text-sm text-gray-400">
+                      <span className="line-through">סכום פריטים:</span>
+                      <span className="line-through">₪{order.pricing?.subtotal?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span className="line-through">מתוכם מע"מ:</span>
+                      <span className="line-through">₪{order.pricing?.tax?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-400">
+                      <span className="line-through">משלוח:</span>
+                      <span className="line-through">₪{order.pricing?.shipping?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-500 font-medium pt-1 border-t border-gray-300 mt-1">
+                      <span className="line-through">סה"כ מקורי:</span>
+                      <span className="line-through">₪{order.pricing?.total?.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 p-3 rounded border border-green-200 mt-3">
+                    <p className="text-xs text-green-700 mb-2">סכומים לחיוב:</p>
+                    <div className="flex justify-between text-sm text-green-800">
+                      <span>פריטים פעילים:</span>
+                      <span>₪{order.pricing?.adjustedSubtotal?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-green-700">
+                      <span>מתוכם מע"מ (18%):</span>
+                      <span>₪{order.pricing?.adjustedTax?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-green-800">
+                      <span>משלוח:</span>
+                      {order.pricing?.adjustedShipping === 0 ? (
+                        <span className="font-medium">בוטל - ₪0</span>
+                      ) : (
+                        <span>₪{order.pricing?.adjustedShipping?.toLocaleString() || 0}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between text-base font-semibold pt-2 border-t border-gray-300 mt-2 text-red-600">
+                    <span>הפרש (לא יגבה):</span>
+                    <span>-₪{order.pricing?.totalRefunds?.toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex justify-between text-xl font-bold pt-2 border-t-2 border-gray-400 text-green-700">
+                    <span>סה"כ לחיוב בפועל:</span>
+                    <span>₪{order.pricing?.adjustedTotal?.toLocaleString()}</span>
+                  </div>
+
+                  {order.pricing?.allItemsCancelled && (
+                    <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-center">
+                      <p className="text-sm font-medium text-red-900">
+                        ⚠️ כל הפריטים בוטלו - אין חיוב
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* אין ביטולים - הצגה רגילה */}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">סכום פריטים:</span>
+                    <span>₪{order.pricing?.subtotal?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>מתוכם מע"מ:</span>
+                    <span>₪{order.pricing?.tax?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">משלוח:</span>
+                    <span>₪{order.pricing?.shipping?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
+                    <span>סה"כ לתשלום:</span>
+                    <span>₪{order.pricing?.total?.toLocaleString()}</span>
+                  </div>
+                </>
               )}
-              <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
-                <span>סה"כ לתשלום:</span>
-                <span>₪{(order.pricing?.adjustedTotal || order.pricing?.total)?.toLocaleString()}</span>
-              </div>
             </div>
           </div>
-
         </div>
 
         {/* Sidebar - Customer Info */}
@@ -544,24 +530,24 @@ export default function OrderDetailPage() {
             <div className="space-y-3 text-sm">
               <div>
                 <p className="text-gray-500">שם:</p>
-                <SafeText as="p" className="font-medium">{order.shippingAddress?.fullName}</SafeText>
+                <p className="font-medium">{order.shippingAddress?.fullName}</p>
               </div>
               <div>
                 <p className="text-gray-500">טלפון:</p>
-                <SafeText as="p" className="font-medium">{order.shippingAddress?.phone}</SafeText>
+                <p className="font-medium">{order.shippingAddress?.phone}</p>
               </div>
               <div>
                 <p className="text-gray-500">אימייל:</p>
-                <SafeText as="p" className="font-medium">{order.shippingAddress?.email}</SafeText>
+                <p className="font-medium">{order.shippingAddress?.email}</p>
               </div>
               <div className="pt-3 border-t">
                 <p className="text-gray-500">כתובת:</p>
                 <p className="font-medium">
-                  <SafeText>{order.shippingAddress?.street}</SafeText>
-                  {order.shippingAddress?.apartment && <>, דירה <SafeText>{order.shippingAddress.apartment}</SafeText></>}
+                  {order.shippingAddress?.street}
+                  {order.shippingAddress?.apartment && `, דירה ${order.shippingAddress.apartment}`}
                 </p>
                 <p className="font-medium">
-                  <SafeText>{order.shippingAddress?.city}</SafeText>, <SafeText>{order.shippingAddress?.zipCode}</SafeText>
+                  {order.shippingAddress?.city}, {order.shippingAddress?.zipCode}
                 </p>
               </div>
             </div>
@@ -609,21 +595,6 @@ export default function OrderDetailPage() {
             reason
           })}
           onClose={() => setCancelModal(null)}
-        />
-      )}
-
-      {historyModal && (
-        <ItemHistoryModal
-          item={historyModal}
-          onClose={() => setHistoryModal(null)}
-        />
-      )}
-
-      {updateStatusModal && (
-        <UpdateStatusModal
-          item={updateStatusModal}
-          onConfirm={handleStatusChange}
-          onClose={() => setUpdateStatusModal(null)}
         />
       )}
     </div>
