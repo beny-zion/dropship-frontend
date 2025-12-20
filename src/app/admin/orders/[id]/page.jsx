@@ -26,6 +26,7 @@ import ItemStatusBadge from '@/components/admin/orders/ItemStatusBadge';
 import ItemStatusSelector from '@/components/admin/orders/ItemStatusSelector';
 import OrderFromSupplierModal from '@/components/admin/orders/OrderFromSupplierModal';
 import CancelItemModal from '@/components/admin/orders/CancelItemModal';
+import { AddTrackingModal } from '@/components/admin/orders/AddTrackingModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
@@ -55,6 +56,7 @@ export default function OrderDetailPage() {
   // ✅ מצב למודלים
   const [orderSupplierModal, setOrderSupplierModal] = useState(null);
   const [cancelModal, setCancelModal] = useState(null);
+  const [trackingModal, setTrackingModal] = useState(null); // { itemId, type: 'israel' | 'customer' }
   const [statusSuggestion, setStatusSuggestion] = useState(null);
 
   // Fetch order
@@ -158,6 +160,16 @@ export default function OrderDetailPage() {
     if (newStatus) {
       updateStatusMutation.mutate({ itemId, newStatus });
     }
+  };
+
+  const handleAddTracking = (itemId, type) => {
+    setTrackingModal({ itemId, type });
+  };
+
+  const handleTrackingSuccess = () => {
+    toast.success('מספר מעקב נוסף בהצלחה');
+    queryClient.invalidateQueries(['admin', 'order', params.id]);
+    setTrackingModal(null);
   };
 
   if (isLoading) {
@@ -375,6 +387,46 @@ export default function OrderDetailPage() {
                             )}
                           </div>
                         )}
+
+                        {/* ✅ Israel Tracking Info */}
+                        {item.israelTracking?.trackingNumber && !isCancelled && (
+                          <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded">
+                            <p className="text-sm font-medium text-purple-900">
+                              ✈️ משלוח בינלאומי
+                            </p>
+                            <p className="text-xs text-purple-700 mt-1">
+                              חברה: {item.israelTracking.carrier}
+                            </p>
+                            <p className="text-xs text-purple-700">
+                              מעקב: {item.israelTracking.trackingNumber}
+                            </p>
+                            {item.israelTracking.estimatedArrival && (
+                              <p className="text-xs text-purple-700">
+                                הגעה משוערת: {new Date(item.israelTracking.estimatedArrival).toLocaleDateString('he-IL')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ✅ Customer Tracking Info */}
+                        {item.customerTracking?.trackingNumber && !isCancelled && (
+                          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                            <p className="text-sm font-medium text-green-900">
+                              🚚 משלוח ללקוח
+                            </p>
+                            <p className="text-xs text-green-700 mt-1">
+                              חברה: {item.customerTracking.carrier}
+                            </p>
+                            <p className="text-xs text-green-700">
+                              מעקב: {item.customerTracking.trackingNumber}
+                            </p>
+                            {item.customerTracking.estimatedDelivery && (
+                              <p className="text-xs text-green-700">
+                                משלוח משוער: {new Date(item.customerTracking.estimatedDelivery).toLocaleDateString('he-IL')}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -412,6 +464,30 @@ export default function OrderDetailPage() {
                           >
                             קישור ספק
                             <ExternalLink className="w-3 h-3 mr-2" />
+                          </Button>
+                        )}
+
+                        {/* Add Israel Tracking Button */}
+                        {item.itemStatus === 'ordered' && !item.israelTracking?.trackingNumber && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAddTracking(item._id, 'israel')}
+                            className="bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100"
+                          >
+                            ✈️ הוסף מעקב בינלאומי
+                          </Button>
+                        )}
+
+                        {/* Add Customer Tracking Button */}
+                        {item.itemStatus === 'arrived_israel' && !item.customerTracking?.trackingNumber && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAddTracking(item._id, 'customer')}
+                            className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                          >
+                            🚚 הוסף מעקב ללקוח
                           </Button>
                         )}
 
@@ -595,6 +671,17 @@ export default function OrderDetailPage() {
             reason
           })}
           onClose={() => setCancelModal(null)}
+        />
+      )}
+
+      {trackingModal && (
+        <AddTrackingModal
+          isOpen={true}
+          onClose={() => setTrackingModal(null)}
+          orderId={params.id}
+          itemId={trackingModal.itemId}
+          type={trackingModal.type}
+          onSuccess={handleTrackingSuccess}
         />
       )}
     </div>

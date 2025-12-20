@@ -55,10 +55,28 @@ export async function bulkUpdateItems(orderId, itemIds, newStatus, notes = '') {
   return response.data;
 }
 
+/**
+ * עדכון מספר מעקב בינלאומי
+ */
+export async function updateIsraelTracking(orderId, itemId, trackingData) {
+  const response = await api.put(`/admin/orders/${orderId}/items/${itemId}/israel-tracking`, trackingData);
+  return response.data;
+}
+
+/**
+ * עדכון מספר מעקב ללקוח
+ */
+export async function updateCustomerTracking(orderId, itemId, trackingData) {
+  const response = await api.put(`/admin/orders/${orderId}/items/${itemId}/customer-tracking`, trackingData);
+  return response.data;
+}
+
 export default {
   updateItemStatus,
   orderItemFromSupplier,
   cancelOrderItem,
   getItemHistory,
-  bulkUpdateItems
+  bulkUpdateItems,
+  updateIsraelTracking,
+  updateCustomerTracking
 };
