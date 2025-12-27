@@ -30,23 +30,17 @@ const CARRIERS_ISRAEL = [
  *
  * @param {boolean} isOpen - האם המודל פתוח
  * @param {function} onClose - פונקציה לסגירת המודל
- * @param {string} orderId - מזהה ההזמנה
- * @param {string} itemId - מזהה הפריט
+ * @param {function} onConfirm - Callback לשליחת הנתונים (מטופל בדף הראשי)
  * @param {string} type - סוג המעקב: 'israel' (בינלאומי) או 'customer' (ללקוח)
- * @param {function} onSuccess - Callback אחרי הוספה מוצלחת
  */
-export function AddTrackingModal({ isOpen, onClose, orderId, itemId, type, onSuccess }) {
+export function AddTrackingModal({ isOpen, onClose, onConfirm, type }) {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [carrier, setCarrier] = useState('');
   const [customCarrierName, setCustomCarrierName] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
 
   const carriers = type === 'israel' ? CARRIERS_INTERNATIONAL : CARRIERS_ISRAEL;
-  const endpoint = type === 'israel'
-    ? `/api/admin/orders/${orderId}/items/${itemId}/israel-tracking`
-    : `/api/admin/orders/${orderId}/items/${itemId}/customer-tracking`;
 
   const title = type === 'israel'
     ? 'הוספת מספר מעקב בינלאומי'
@@ -58,41 +52,25 @@ export function AddTrackingModal({ isOpen, onClose, orderId, itemId, type, onSuc
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('לא נמצא טוקן אימות');
-      }
-
       // קבע את שם החברה - אם "אחר" נבחר, השתמש בשם מותאם אישית
       const finalCarrier = carrier === 'other' ? customCarrierName.trim() : carrier;
 
       // Validation - אם בחרו "אחר" אבל לא הזינו שם
       if (carrier === 'other' && !customCarrierName.trim()) {
-        throw new Error('נא להזין שם חברת שליחות');
+        alert('נא להזין שם חברת שליחות');
+        setIsSubmitting(false);
+        return;
       }
 
-      const response = await fetch(endpoint, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          trackingNumber: trackingNumber.trim(),
-          carrier: finalCarrier,
-          [type === 'israel' ? 'estimatedArrival' : 'estimatedDelivery']: estimatedDate || null
-        })
+      // Call parent's confirm handler
+      await onConfirm({
+        trackingNumber: trackingNumber.trim(),
+        carrier: finalCarrier,
+        [type === 'israel' ? 'estimatedArrival' : 'estimatedDelivery']: estimatedDate || null
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'שגיאה בהוספת מספר מעקב');
-      }
 
       // Reset form
       setTrackingNumber('');
@@ -100,16 +78,11 @@ export function AddTrackingModal({ isOpen, onClose, orderId, itemId, type, onSuc
       setCustomCarrierName('');
       setEstimatedDate('');
 
-      // Call success callback
-      if (onSuccess) {
-        onSuccess(result);
-      }
-
       onClose();
 
     } catch (err) {
       console.error('Error adding tracking:', err);
-      setError(err.message || 'שגיאה בהוספת מספר מעקב');
+      alert(err.message || 'שגיאה בהוספת מספר מעקב');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,7 +94,6 @@ export function AddTrackingModal({ isOpen, onClose, orderId, itemId, type, onSuc
       setCarrier('');
       setCustomCarrierName('');
       setEstimatedDate('');
-      setError('');
       onClose();
     }
   };
@@ -199,13 +171,6 @@ export function AddTrackingModal({ isOpen, onClose, orderId, itemId, type, onSuc
               className="mt-1"
             />
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md text-sm">
-              {error}
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div className="flex gap-2 justify-end pt-4">

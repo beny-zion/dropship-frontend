@@ -32,21 +32,16 @@ import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
   updateItemStatus,
   orderItemFromSupplier,
-  cancelOrderItem
+  cancelOrderItem,
+  updateIsraelTracking,
+  updateCustomerTracking
 } from '@/lib/api/orderItems';
 
-const statusConfig = {
-  pending: { label: 'ממתין לאישור', className: 'bg-yellow-100 text-yellow-800' },
-  payment_hold: { label: 'מסגרת אשראי תפוסה', className: 'bg-orange-100 text-orange-800' },
-  ordered: { label: 'הוזמן מארה"ב', className: 'bg-blue-100 text-blue-800' },
-  cancelled: { label: 'בוטל', className: 'bg-red-100 text-red-800' },
-  arrived_us_warehouse: { label: 'הגיע למחסן ארה"ב', className: 'bg-indigo-100 text-indigo-800' },
-  shipped_to_israel: { label: 'נשלח לישראל', className: 'bg-purple-100 text-purple-800' },
-  customs_israel: { label: 'במכס בישראל', className: 'bg-pink-100 text-pink-800' },
-  arrived_israel_warehouse: { label: 'הגיע למחסן בישראל', className: 'bg-cyan-100 text-cyan-800' },
-  shipped_to_customer: { label: 'נשלח ללקוח', className: 'bg-teal-100 text-teal-800' },
-  delivered: { label: 'נמסר', className: 'bg-green-100 text-green-800' }
-};
+// ✅ ייבוא מקור מרכזי לסטטוסים
+import { getAllStatusConfigs, getStatusConfig } from '@/lib/constants/orderStatuses';
+
+// ✅ קבלת כל הסטטוסים מהמקור המרכזי (כולל Legacy)
+const statusConfig = getAllStatusConfigs(false);
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -148,6 +143,25 @@ export default function OrderDetailPage() {
     }
   });
 
+  // ✅ Mutation לעדכון tracking
+  const updateTrackingMutation = useMutation({
+    mutationFn: ({ itemId, data, type }) => {
+      if (type === 'israel') {
+        return updateIsraelTracking(params.id, itemId, data);
+      } else {
+        return updateCustomerTracking(params.id, itemId, data);
+      }
+    },
+    onSuccess: () => {
+      toast.success('מספר מעקב נוסף בהצלחה');
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
+      setTrackingModal(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'שגיאה בהוספת מספר מעקב');
+    }
+  });
+
   const handleOrderFromSupplier = (item) => {
     setOrderSupplierModal(item);
   };
@@ -164,12 +178,6 @@ export default function OrderDetailPage() {
 
   const handleAddTracking = (itemId, type) => {
     setTrackingModal({ itemId, type });
-  };
-
-  const handleTrackingSuccess = () => {
-    toast.success('מספר מעקב נוסף בהצלחה');
-    queryClient.invalidateQueries(['admin', 'order', params.id]);
-    setTrackingModal(null);
   };
 
   if (isLoading) {
@@ -678,10 +686,12 @@ export default function OrderDetailPage() {
         <AddTrackingModal
           isOpen={true}
           onClose={() => setTrackingModal(null)}
-          orderId={params.id}
-          itemId={trackingModal.itemId}
           type={trackingModal.type}
-          onSuccess={handleTrackingSuccess}
+          onConfirm={(data) => updateTrackingMutation.mutate({
+            itemId: trackingModal.itemId,
+            data,
+            type: trackingModal.type
+          })}
         />
       )}
     </div>

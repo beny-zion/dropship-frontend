@@ -112,14 +112,14 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // ✅ Validate payment details
+      // ✅ Step 1: Validate payment details FIRST
       if (!paymentDetails?.cardNumber || !paymentDetails?.cvv || !paymentDetails?.userId) {
         toast.error('יש למלא את כל פרטי התשלום');
         setLoading(false);
         return;
       }
 
-      // ✅ Step 1: Create order
+      // ✅ Step 2: Prepare order data (but don't create yet!)
       const orderData = {
         items: cart.items.map(item => ({
           product: item.product._id,
@@ -131,6 +131,7 @@ export default function CheckoutPage() {
         expectedTotal: cart.pricing?.total,
       };
 
+      // ✅ Step 3: Create order
       const orderResponse = await createOrder(orderData);
       console.log('📦 Order created:', orderResponse);
 
@@ -140,7 +141,7 @@ export default function CheckoutPage() {
 
       const orderId = orderResponse.data._id;
 
-      // ✅ Step 2: Hold credit card (תפיסת מסגרת)
+      // ✅ Step 4: Hold credit card (תפיסת מסגרת) - CRITICAL STEP
       try {
         // המר מספר כרטיס (הסר רווחים)
         const cleanCardNumber = paymentDetails.cardNumber.replace(/\s/g, '');
@@ -156,24 +157,31 @@ export default function CheckoutPage() {
         console.log('💳 Payment hold successful:', holdResponse);
 
         if (!holdResponse?.success) {
-          throw new Error(holdResponse?.message || 'שגיאה בתפיסת מסגרת אשראי');
+          // Payment hold failed - throw error with specific message
+          const errorMessage = holdResponse?.message || 'כרטיס האשראי נדחה';
+          throw new Error(errorMessage);
         }
 
-        toast.success('תפיסת מסגרת אשראי בהצלחה!');
-      } catch (paymentError) {
-        console.error('❌ Payment hold error:', paymentError);
+        console.log('✅ Payment hold completed successfully');
 
-        // אם תפיסת המסגרת נכשלה, עדיין נציג את ההזמנה אבל עם התראה
+      } catch (paymentError) {
+        console.error('❌ Payment hold failed:', paymentError);
+
+        // 🚨 CRITICAL: Payment failed - stay on checkout, keep cart intact
         toast.error(
-          paymentError.message || 'שגיאה בתפיסת מסגרת האשראי',
+          paymentError.message || 'כרטיס האשראי נדחה',
           {
-            description: 'ההזמנה נוצרה אך התשלום לא הושלם. נציג ליצור קשר',
-            duration: 7000,
+            description: 'אנא נסה כרטיס אחר או צור קשר עם חברת האשראי שלך',
+            duration: 8000,
           }
         );
+
+        // Stop here - don't clear cart, don't redirect
+        setLoading(false);
+        return;
       }
 
-      // ✅ Step 3: Save address if requested
+      // ✅ Step 5: Save address if requested (only after successful payment)
       if (saveAddress && !selectedAddressId) {
         try {
           await createAddressMutation.mutateAsync({
@@ -194,8 +202,8 @@ export default function CheckoutPage() {
         }
       }
 
-      // ✅ Step 4: Clear cart & redirect
-      toast.success('ההזמנה נוצרה בהצלחה!');
+      // ✅ Step 6: Clear cart & redirect (only after successful payment)
+      toast.success('ההזמנה נוצרה והתשלום אושר בהצלחה!');
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       router.push(`/orders/${orderId}`);
 

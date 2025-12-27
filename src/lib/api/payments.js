@@ -3,7 +3,26 @@
 import client from './client.js';
 
 /**
- * תפיסת מסגרת אשראי (Hold)
+ * ✅ IFRAME: יצירת קישור תשלום (החלף את holdCreditCard)
+ * @param {string} orderId - Order ID
+ * @returns {Promise} Payment URL result
+ */
+export const createPaymentLink = async (orderId) => {
+  const response = await client.post('/payments/create-payment-link', {
+    orderId
+  });
+  return response;
+};
+
+/**
+ * ❌ DEPRECATED: תפיסת מסגרת אשראי (Hold) - שיטה ישנה
+ *
+ * ⚠️ לא מומלץ! משתמש בפרטי כרטיס ישירות
+ * ⚠️ דורש PCI Compliance
+ *
+ * השתמש ב-createPaymentLink() במקום!
+ *
+ * @deprecated
  * @param {string} orderId - Order ID
  * @param {Object} paymentDetails - Payment card details
  * @param {string} paymentDetails.cardNumber - Card number (without spaces)
@@ -14,6 +33,7 @@ import client from './client.js';
  * @returns {Promise} Hold result
  */
 export const holdCreditCard = async (orderId, paymentDetails) => {
+  console.warn('⚠️ holdCreditCard is DEPRECATED! Use createPaymentLink() instead.');
   const response = await client.post('/payments/hold', {
     orderId,
     paymentDetails

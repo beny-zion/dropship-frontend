@@ -16,23 +16,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getUrgencyLevel, getUrgencyColor, calculateCompletion, formatRelativeTime } from '@/lib/utils/orderPriority';
-
-const statusConfig = {
-  pending: { label: 'ממתין לאישור', className: 'bg-yellow-100 text-yellow-800' },
-  payment_hold: { label: 'בהמתנה לתשלום', className: 'bg-orange-100 text-orange-800' },
-  ordered: { label: 'הוזמן', className: 'bg-blue-100 text-blue-800' },
-  in_transit: { label: 'בדרך', className: 'bg-purple-100 text-purple-800' },
-  delivered: { label: 'נמסר', className: 'bg-green-100 text-green-800' },
-  cancelled: { label: 'בוטל', className: 'bg-red-100 text-red-800' }
-};
+import { getStatusConfig } from '@/lib/constants/orderStatuses';
 
 function StatusBadge({ status, size = 'default' }) {
-  const config = statusConfig[status] || statusConfig.pending;
+  const { label, className } = getStatusConfig(status);
   const sizeClass = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-3 py-1';
 
   return (
-    <span className={`inline-flex items-center rounded-full font-medium ${config.className} ${sizeClass}`}>
-      {config.label}
+    <span className={`inline-flex items-center rounded-full font-medium ${className} ${sizeClass}`}>
+      {label}
     </span>
   );
 }
