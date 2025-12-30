@@ -526,43 +526,6 @@ export default function OrderDetailPage() {
                             )}
                           </div>
                         )}
-
-                        {/* ✅ Item Status History */}
-                        {item.statusHistory && item.statusHistory.length > 0 && (
-                          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded">
-                            <p className="text-sm font-medium text-gray-900 mb-2">
-                              📋 היסטוריית סטטוסים ({item.statusHistory.length})
-                            </p>
-                            <div className="space-y-1.5">
-                              {item.statusHistory.map((history, historyIdx) => (
-                                <div key={historyIdx} className="flex flex-col text-xs bg-white p-2 rounded border border-gray-200">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                      <ItemStatusBadge status={history.status} />
-                                    </div>
-                                    <span className="text-gray-500 whitespace-nowrap">
-                                      {new Date(history.changedAt).toLocaleString('he-IL', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </span>
-                                  </div>
-                                  {history.notes && (
-                                    <p className="text-gray-600 mr-4 text-xs">{history.notes}</p>
-                                  )}
-                                  {history.changedBy && (
-                                    <p className="text-gray-400 mr-4 text-xs mt-1">
-                                      על ידי: {history.changedBy.firstName} {history.changedBy.lastName}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
 
