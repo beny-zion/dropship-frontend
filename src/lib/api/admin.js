@@ -109,6 +109,11 @@ export const adminApi = {
     return await apiClient.put(`/admin/orders/${id}/status`, { status });
   },
 
+  // Phase 9.3: Manual status override for order
+  manualOrderStatusOverride: async (id, data) => {
+    return await apiClient.put(`/admin/orders/${id}/manual-status`, data);
+  },
+
   updateTracking: async (id, trackingData) => {
     return await apiClient.put(`/admin/orders/${id}/tracking`, trackingData);
   },

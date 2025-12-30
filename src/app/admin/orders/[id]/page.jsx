@@ -30,6 +30,7 @@ import CancelItemModal from '@/components/admin/orders/CancelItemModal';
 import { AddTrackingModal } from '@/components/admin/orders/AddTrackingModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
 import ManualStatusOverrideModal from '@/components/admin/orders/ManualStatusOverrideModal';
+import ManualOrderStatusOverrideModal from '@/components/admin/orders/ManualOrderStatusOverrideModal';
 import { CopyableText } from '@/components/admin/CopyButton';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
@@ -56,7 +57,8 @@ export default function OrderDetailPage() {
   const [orderSupplierModal, setOrderSupplierModal] = useState(null);
   const [cancelModal, setCancelModal] = useState(null);
   const [trackingModal, setTrackingModal] = useState(null); // { itemId, type: 'israel' | 'customer' }
-  const [manualOverrideModal, setManualOverrideModal] = useState(null); // Phase 9.3
+  const [manualOverrideModal, setManualOverrideModal] = useState(null); // Phase 9.3 - items
+  const [manualOrderOverrideModal, setManualOrderOverrideModal] = useState(false); // Phase 9.3 - order
   const [statusSuggestion, setStatusSuggestion] = useState(null);
 
   // Fetch order
@@ -186,6 +188,23 @@ export default function OrderDetailPage() {
     }
   });
 
+  // Phase 9.3: Manual override for ORDER status
+  const manualOrderOverrideMutation = useMutation({
+    mutationFn: (data) => adminApi.manualOrderStatusOverride(params.id, data),
+    onSuccess: (response) => {
+      const message = response.data?.message || 'הפעולה בוצעה בהצלחה';
+      toast.success(message);
+      if (response.data?.warning) {
+        toast.warning(response.data.warning, { duration: 5000 });
+      }
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
+      setManualOrderOverrideModal(false);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'שגיאה בנעילת הסטטוס');
+    }
+  });
+
   const handleOrderFromSupplier = (item) => {
     setOrderSupplierModal(item);
   };
@@ -251,21 +270,38 @@ export default function OrderDetailPage() {
           <Badge className={statusConfig[order.status]?.className + ' text-base px-4 py-2'}>
             {statusConfig[order.status]?.label || order.status}
           </Badge>
-          <select
-            value={order.status}
-            onChange={(e) => {
-              if (window.confirm(`האם לעדכן את סטטוס ההזמנה ל-${statusConfig[e.target.value]?.label}?`)) {
-                updateOrderStatusMutation.mutate(e.target.value);
-              }
-            }}
-            className="text-sm border border-gray-300 rounded px-3 py-1.5 focus:border-blue-500 focus:outline-none"
-          >
-            {Object.entries(statusConfig).map(([value, config]) => (
-              <option key={value} value={value}>
-                {config.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              value={order.status}
+              onChange={(e) => {
+                if (window.confirm(`האם לעדכן את סטטוס ההזמנה ל-${statusConfig[e.target.value]?.label}?`)) {
+                  updateOrderStatusMutation.mutate(e.target.value);
+                }
+              }}
+              className={`text-sm border rounded px-3 py-1.5 focus:outline-none ${
+                order.manualStatusOverride
+                  ? 'border-amber-400 bg-amber-50 focus:border-amber-600'
+                  : 'border-gray-300 focus:border-blue-500'
+              }`}
+            >
+              {Object.entries(statusConfig).map(([value, config]) => (
+                <option key={value} value={value}>
+                  {config.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setManualOrderOverrideModal(true)}
+              className={`text-lg px-2 py-1 rounded transition-colors ${
+                order.manualStatusOverride
+                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-700'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+              }`}
+              title={order.manualStatusOverride ? 'סטטוס ההזמנה נעול - לחץ לעריכה' : 'נעל סטטוס ידנית'}
+            >
+              {order.manualStatusOverride ? '🔒' : '🔓'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -946,6 +982,16 @@ export default function OrderDetailPage() {
             data
           })}
           isLoading={manualOverrideMutation.isPending}
+        />
+      )}
+
+      {/* Phase 9.3: Manual Order Status Override Modal */}
+      {manualOrderOverrideModal && (
+        <ManualOrderStatusOverrideModal
+          order={order}
+          onClose={() => setManualOrderOverrideModal(false)}
+          onConfirm={(data) => manualOrderOverrideMutation.mutate(data)}
+          isLoading={manualOrderOverrideMutation.isPending}
         />
       )}
     </div>
