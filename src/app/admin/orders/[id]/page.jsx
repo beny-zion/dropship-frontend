@@ -31,6 +31,7 @@ import { AddTrackingModal } from '@/components/admin/orders/AddTrackingModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
 import ManualStatusOverrideModal from '@/components/admin/orders/ManualStatusOverrideModal';
 import ManualOrderStatusOverrideModal from '@/components/admin/orders/ManualOrderStatusOverrideModal';
+import StatusHistoryAccordion from '@/components/admin/orders/StatusHistoryAccordion';
 import { CopyableText } from '@/components/admin/CopyButton';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
@@ -650,6 +651,16 @@ export default function OrderDetailPage() {
                         </Button>
                       </div>
                     )}
+
+                    {/* Status History Accordion */}
+                    {item.statusHistory && item.statusHistory.length > 0 && (
+                      <StatusHistoryAccordion
+                        title="היסטוריית סטטוס הפריט"
+                        history={item.statusHistory}
+                        type="item"
+                        defaultOpen={false}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -897,42 +908,21 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* ✅ Order Timeline */}
+      {/* ✅ Order Timeline - Accordion */}
       {order.timeline && order.timeline.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
-            <Package className="w-5 h-5" />
-            ציר זמן של ההזמנה ({order.timeline.length} אירועים)
-          </h2>
-          <div className="space-y-4">
-            {order.timeline.map((event, index) => (
-              <div key={index} className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                  {index < order.timeline.length - 1 && (
-                    <div className="w-px h-full bg-gray-300 my-1"></div>
-                  )}
-                </div>
-                <div className="flex-1 pb-4">
-                  <div className="flex items-start justify-between">
-                    <p className="font-medium text-sm text-gray-900">{event.message}</p>
-                    <p className="text-xs text-gray-500 mr-4 whitespace-nowrap">
-                      {new Date(event.timestamp).toLocaleString('he-IL', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                  {event.details && (
-                    <p className="text-xs text-gray-600 mt-1">{event.details}</p>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="w-5 h-5 text-neutral-700" />
+            <h2 className="text-lg font-semibold text-neutral-900">
+              ציר זמן של ההזמנה
+            </h2>
           </div>
+          <StatusHistoryAccordion
+            title={`היסטוריה מלאה (${order.timeline.length} אירועים)`}
+            history={order.timeline}
+            type="order"
+            defaultOpen={false}
+          />
         </div>
       )}
 
