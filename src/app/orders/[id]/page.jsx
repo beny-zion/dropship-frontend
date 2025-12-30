@@ -361,7 +361,9 @@ export default function OrderDetailsPage() {
 
           {/* Timeline - filter out internal events for customers */}
           {(() => {
-            const customerTimeline = order.timeline.filter(event => !event.internal);
+            // Only show events explicitly marked as customer-facing (internal: false)
+            // Events without the internal field are treated as internal for safety
+            const customerTimeline = order.timeline.filter(event => event.internal === false);
             return customerTimeline.length > 0 ? (
               <div className="border border-neutral-200 p-6">
                 <h2 className="text-lg font-normal tracking-wide mb-6">מעקב הזמנה</h2>
