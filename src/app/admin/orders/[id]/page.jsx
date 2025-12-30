@@ -16,7 +16,8 @@ import {
   MapPin,
   CreditCard,
   ShoppingBag,
-  ExternalLink
+  ExternalLink,
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -28,6 +29,7 @@ import OrderFromSupplierModal from '@/components/admin/orders/OrderFromSupplierM
 import CancelItemModal from '@/components/admin/orders/CancelItemModal';
 import { AddTrackingModal } from '@/components/admin/orders/AddTrackingModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
+import ManualStatusOverrideModal from '@/components/admin/orders/ManualStatusOverrideModal';
 import { CopyableText } from '@/components/admin/CopyButton';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
@@ -35,7 +37,8 @@ import {
   orderItemFromSupplier,
   cancelOrderItem,
   updateIsraelTracking,
-  updateCustomerTracking
+  updateCustomerTracking,
+  manualStatusOverride
 } from '@/lib/api/orderItems';
 
 // ✅ ייבוא מקור מרכזי לסטטוסים
@@ -53,6 +56,7 @@ export default function OrderDetailPage() {
   const [orderSupplierModal, setOrderSupplierModal] = useState(null);
   const [cancelModal, setCancelModal] = useState(null);
   const [trackingModal, setTrackingModal] = useState(null); // { itemId, type: 'israel' | 'customer' }
+  const [manualOverrideModal, setManualOverrideModal] = useState(null); // Phase 9.3
   const [statusSuggestion, setStatusSuggestion] = useState(null);
 
   // Fetch order
@@ -160,6 +164,25 @@ export default function OrderDetailPage() {
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'שגיאה בהוספת מספר מעקב');
+    }
+  });
+
+  // ✅ Phase 9.3: Mutation לנעילת/שחרור סטטוס ידני
+  const manualOverrideMutation = useMutation({
+    mutationFn: ({ itemId, data }) => manualStatusOverride(params.id, itemId, data),
+    onSuccess: (response) => {
+      const message = response.data?.message || 'הפעולה בוצעה בהצלחה';
+      toast.success(message);
+
+      if (response.data?.warning) {
+        toast.warning(response.data.warning, { duration: 5000 });
+      }
+
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
+      setManualOverrideModal(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'שגיאה בנעילת הסטטוס');
     }
   });
 
@@ -531,6 +554,19 @@ export default function OrderDetailPage() {
                           />
                         )}
 
+                        {/* Phase 9.3: Manual Override Lock Button */}
+                        {!isPending && (
+                          <Button
+                            variant={item.manualStatusOverride ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setManualOverrideModal(item)}
+                            className={item.manualStatusOverride ? "bg-amber-600 hover:bg-amber-700 text-white" : "text-neutral-600"}
+                            title={item.manualStatusOverride ? "סטטוס נעול - האוטומציה לא תשנה" : "נעל סטטוס (למקרים חריגים)"}
+                          >
+                            {item.manualStatusOverride ? '🔒 נעול' : '🔓'}
+                          </Button>
+                        )}
+
                         {/* Supplier Link */}
                         {item.supplierLink && (
                           <Button
@@ -897,6 +933,19 @@ export default function OrderDetailPage() {
             data,
             type: trackingModal.type
           })}
+        />
+      )}
+
+      {/* Phase 9.3: Manual Status Override Modal */}
+      {manualOverrideModal && (
+        <ManualStatusOverrideModal
+          item={manualOverrideModal}
+          onClose={() => setManualOverrideModal(null)}
+          onConfirm={(data) => manualOverrideMutation.mutate({
+            itemId: manualOverrideModal._id,
+            data
+          })}
+          isLoading={manualOverrideMutation.isPending}
         />
       )}
     </div>

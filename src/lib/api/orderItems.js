@@ -71,6 +71,15 @@ export async function updateCustomerTracking(orderId, itemId, trackingData) {
   return response.data;
 }
 
+/**
+ * Phase 9.3: נעילת/שחרור סטטוס ידני
+ * מונע מהאוטומציה לשנות את הסטטוס
+ */
+export async function manualStatusOverride(orderId, itemId, data) {
+  const response = await api.put(`/admin/orders/${orderId}/items/${itemId}/manual-status`, data);
+  return response.data;
+}
+
 export default {
   updateItemStatus,
   orderItemFromSupplier,
@@ -78,5 +87,6 @@ export default {
   getItemHistory,
   bulkUpdateItems,
   updateIsraelTracking,
-  updateCustomerTracking
+  updateCustomerTracking,
+  manualStatusOverride
 };
