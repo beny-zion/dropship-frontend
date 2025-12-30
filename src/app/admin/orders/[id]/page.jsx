@@ -28,6 +28,7 @@ import OrderFromSupplierModal from '@/components/admin/orders/OrderFromSupplierM
 import CancelItemModal from '@/components/admin/orders/CancelItemModal';
 import { AddTrackingModal } from '@/components/admin/orders/AddTrackingModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
+import { CopyableText } from '@/components/admin/CopyButton';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
   updateItemStatus,
@@ -208,9 +209,15 @@ export default function OrderDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              הזמנה {order.orderNumber}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900">הזמנה</h1>
+              <CopyableText
+                text={order.orderNumber}
+                label="מספר הזמנה"
+                mono={true}
+                className="text-base"
+              />
+            </div>
             <p className="text-gray-600 mt-1">
               נוצרה בתאריך {new Date(order.createdAt).toLocaleDateString('he-IL')}
             </p>
@@ -382,16 +389,28 @@ export default function OrderDetailPage() {
                         {/* ✅ Supplier Order Info */}
                         {item.supplierOrder?.supplierOrderNumber && !isCancelled && (
                           <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                            <p className="text-sm font-medium text-blue-900">
+                            <p className="text-sm font-medium text-blue-900 mb-2">
                               📦 הוזמן מספק
                             </p>
-                            <p className="text-xs text-blue-700 mt-1">
-                              מספר הזמנה: {item.supplierOrder.supplierOrderNumber}
-                            </p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs text-blue-700">מספר הזמנה:</span>
+                              <CopyableText
+                                text={item.supplierOrder.supplierOrderNumber}
+                                label="מספר הזמנה מספק"
+                                mono={true}
+                                className="bg-blue-100 border-blue-300"
+                              />
+                            </div>
                             {item.supplierOrder.supplierTrackingNumber && (
-                              <p className="text-xs text-blue-700">
-                                מעקב: {item.supplierOrder.supplierTrackingNumber}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-blue-700">מעקב:</span>
+                                <CopyableText
+                                  text={item.supplierOrder.supplierTrackingNumber}
+                                  label="מספר מעקב ספק"
+                                  mono={true}
+                                  className="bg-blue-100 border-blue-300"
+                                />
+                              </div>
                             )}
                           </div>
                         )}
@@ -399,15 +418,21 @@ export default function OrderDetailPage() {
                         {/* ✅ Israel Tracking Info */}
                         {item.israelTracking?.trackingNumber && !isCancelled && (
                           <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded">
-                            <p className="text-sm font-medium text-purple-900">
+                            <p className="text-sm font-medium text-purple-900 mb-2">
                               ✈️ משלוח בינלאומי
                             </p>
-                            <p className="text-xs text-purple-700 mt-1">
+                            <p className="text-xs text-purple-700 mb-1">
                               חברה: {item.israelTracking.carrier}
                             </p>
-                            <p className="text-xs text-purple-700">
-                              מעקב: {item.israelTracking.trackingNumber}
-                            </p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs text-purple-700">מעקב:</span>
+                              <CopyableText
+                                text={item.israelTracking.trackingNumber}
+                                label="מספר מעקב בינלאומי"
+                                mono={true}
+                                className="bg-purple-100 border-purple-300"
+                              />
+                            </div>
                             {item.israelTracking.estimatedArrival && (
                               <p className="text-xs text-purple-700">
                                 הגעה משוערת: {new Date(item.israelTracking.estimatedArrival).toLocaleDateString('he-IL')}
@@ -419,20 +444,63 @@ export default function OrderDetailPage() {
                         {/* ✅ Customer Tracking Info */}
                         {item.customerTracking?.trackingNumber && !isCancelled && (
                           <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
-                            <p className="text-sm font-medium text-green-900">
+                            <p className="text-sm font-medium text-green-900 mb-2">
                               🚚 משלוח ללקוח
                             </p>
-                            <p className="text-xs text-green-700 mt-1">
+                            <p className="text-xs text-green-700 mb-1">
                               חברה: {item.customerTracking.carrier}
                             </p>
-                            <p className="text-xs text-green-700">
-                              מעקב: {item.customerTracking.trackingNumber}
-                            </p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs text-green-700">מעקב:</span>
+                              <CopyableText
+                                text={item.customerTracking.trackingNumber}
+                                label="מספר מעקב ללקוח"
+                                mono={true}
+                                className="bg-green-100 border-green-300"
+                              />
+                            </div>
                             {item.customerTracking.estimatedDelivery && (
                               <p className="text-xs text-green-700">
                                 משלוח משוער: {new Date(item.customerTracking.estimatedDelivery).toLocaleDateString('he-IL')}
                               </p>
                             )}
+                          </div>
+                        )}
+
+                        {/* ✅ Item Status History */}
+                        {item.statusHistory && item.statusHistory.length > 0 && (
+                          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded">
+                            <p className="text-sm font-medium text-gray-900 mb-2">
+                              📋 היסטוריית סטטוסים ({item.statusHistory.length})
+                            </p>
+                            <div className="space-y-1.5">
+                              {item.statusHistory.map((history, historyIdx) => (
+                                <div key={historyIdx} className="flex flex-col text-xs bg-white p-2 rounded border border-gray-200">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                      <ItemStatusBadge status={history.status} />
+                                    </div>
+                                    <span className="text-gray-500 whitespace-nowrap">
+                                      {new Date(history.changedAt).toLocaleString('he-IL', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                  </div>
+                                  {history.notes && (
+                                    <p className="text-gray-600 mr-4 text-xs">{history.notes}</p>
+                                  )}
+                                  {history.changedBy && (
+                                    <p className="text-gray-400 mr-4 text-xs mt-1">
+                                      על ידי: {history.changedBy.firstName} {history.changedBy.lastName}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -643,21 +711,158 @@ export default function OrderDetailPage() {
               <CreditCard className="w-5 h-5" />
               תשלום
             </h2>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">סטטוס:</span>
-                <Badge variant={order.payment?.status === 'completed' ? 'success' : 'warning'}>
-                  {order.payment?.status === 'completed' ? 'שולם' : 'ממתין'}
-                </Badge>
+            <div className="space-y-3 text-sm">
+              {/* Payment Status */}
+              <div>
+                <p className="text-gray-500 mb-1">סטטוס:</p>
+                <div>
+                  {order.payment?.status === 'pending' && (
+                    <Badge className="bg-gray-100 text-gray-700">⏱️ ממתין לתשלום</Badge>
+                  )}
+                  {order.payment?.status === 'hold' && (
+                    <Badge className="bg-blue-100 text-blue-700">💳 מסגרת תפוסה</Badge>
+                  )}
+                  {order.payment?.status === 'ready_to_charge' && (
+                    <Badge className="bg-yellow-100 text-yellow-700">⏳ מוכן לחיוב</Badge>
+                  )}
+                  {order.payment?.status === 'charged' && (
+                    <Badge className="bg-green-100 text-green-700">✅ חויב בהצלחה</Badge>
+                  )}
+                  {order.payment?.status === 'cancelled' && (
+                    <Badge className="bg-red-100 text-red-700">❌ בוטל</Badge>
+                  )}
+                  {order.payment?.status === 'failed' && (
+                    <Badge className="bg-red-100 text-red-700">⚠️ נכשל</Badge>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">אמצעי:</span>
-                <span className="font-medium">{order.payment?.method}</span>
-              </div>
+
+              {/* Transaction ID */}
+              {order.payment?.hypTransactionId && (
+                <div>
+                  <p className="text-gray-500 mb-1">מזהה עסקה:</p>
+                  <CopyableText
+                    text={order.payment.hypTransactionId}
+                    label="מזהה עסקה"
+                    mono={true}
+                  />
+                </div>
+              )}
+
+              {/* Hold Amount */}
+              {order.payment?.holdAmount && (
+                <div>
+                  <p className="text-gray-500">מסגרת שתפסנו:</p>
+                  <p className="font-medium">₪{order.payment.holdAmount.toLocaleString()}</p>
+                  {order.payment.holdAt && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      בתאריך: {new Date(order.payment.holdAt).toLocaleString('he-IL')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Charged Amount */}
+              {order.payment?.chargedAmount && (
+                <div>
+                  <p className="text-gray-500">סכום שחויב:</p>
+                  <p className="font-medium text-green-600">₪{order.payment.chargedAmount.toLocaleString()}</p>
+                  {order.payment.chargedAt && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      בתאריך: {new Date(order.payment.chargedAt).toLocaleString('he-IL')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Payment Method */}
+              {order.payment?.method && (
+                <div>
+                  <p className="text-gray-500">אמצעי:</p>
+                  <p className="font-medium">{order.payment.method === 'credit_card' ? 'כרטיס אשראי' : order.payment.method}</p>
+                </div>
+              )}
+
+              {/* Last Error */}
+              {order.payment?.lastError && (
+                <div className="p-2 bg-red-50 border border-red-200 rounded">
+                  <p className="text-xs font-medium text-red-900">שגיאה אחרונה:</p>
+                  <p className="text-xs text-red-700 mt-1">{order.payment.lastError}</p>
+                </div>
+              )}
+
+              {/* Payment History */}
+              {order.payment?.history && order.payment.history.length > 0 && (
+                <div className="pt-3 border-t">
+                  <p className="text-gray-500 mb-2">היסטוריה:</p>
+                  <div className="space-y-2">
+                    {order.payment.history.map((event, idx) => (
+                      <div key={idx} className="text-xs bg-gray-50 p-2 rounded border">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-700">{event.status}</span>
+                          <span className="text-gray-500">
+                            {new Date(event.timestamp).toLocaleString('he-IL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        {event.amount && (
+                          <p className="text-gray-600 mt-1">סכום: ₪{event.amount.toLocaleString()}</p>
+                        )}
+                        {event.message && (
+                          <p className="text-gray-600 mt-1">{event.message}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* ✅ Order Timeline */}
+      {order.timeline && order.timeline.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
+            <Package className="w-5 h-5" />
+            ציר זמן של ההזמנה ({order.timeline.length} אירועים)
+          </h2>
+          <div className="space-y-4">
+            {order.timeline.map((event, index) => (
+              <div key={index} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                  {index < order.timeline.length - 1 && (
+                    <div className="w-px h-full bg-gray-300 my-1"></div>
+                  )}
+                </div>
+                <div className="flex-1 pb-4">
+                  <div className="flex items-start justify-between">
+                    <p className="font-medium text-sm text-gray-900">{event.message}</p>
+                    <p className="text-xs text-gray-500 mr-4 whitespace-nowrap">
+                      {new Date(event.timestamp).toLocaleString('he-IL', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  {event.details && (
+                    <p className="text-xs text-gray-600 mt-1">{event.details}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ✅ Modals */}
       {orderSupplierModal && (

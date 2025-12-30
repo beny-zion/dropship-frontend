@@ -1,22 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, Lock, CheckCircle2, Loader2, AlertCircle, X } from 'lucide-react';
 import Image from 'next/image';
+import { createPaymentLink } from '@/lib/api/payments';
+import { getPaymentStatus } from '@/lib/api/payments';
 
 /**
  * PaymentIframe - קומפוננטת תשלום באמצעות IFRAME של HyPay
- * 
+ *
  * ✅ בטוח - פרטי כרטיס לא עוברים דרך השרת שלנו
  * ✅ לא צריך PCI Compliance
  * ✅ HyPay מטפל בכל האבטחה
  */
-export function PaymentIframe({ 
-  orderId, 
-  amount, 
-  onSuccess, 
-  onError, 
-  onCancel 
+export function PaymentIframe({
+  orderId,
+  amount,
+  onSuccess,
+  onError,
+  onCancel
 }) {
   const [status, setStatus] = useState('loading'); // loading, ready, processing, success, error
   const [paymentUrl, setPaymentUrl] = useState(null);
@@ -27,20 +29,14 @@ export function PaymentIframe({
     async function fetchPaymentUrl() {
       try {
         setStatus('loading');
-        
-        const response = await fetch('/api/payments/create-payment-link', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId })
-        });
 
-        const data = await response.json();
+        const response = await createPaymentLink(orderId);
 
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || 'שגיאה ביצירת קישור תשלום');
+        if (!response?.success) {
+          throw new Error(response?.message || 'שגיאה ביצירת קישור תשלום');
         }
 
-        setPaymentUrl(data.paymentUrl);
+        setPaymentUrl(response.paymentUrl);
         setStatus('ready');
 
       } catch (err) {
@@ -88,22 +84,51 @@ export function PaymentIframe({
   useEffect(() => {
     if (status !== 'ready') return;
 
+    console.log('🔄 [Polling] Started polling for order:', orderId);
+
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/payments/status/${orderId}`);
-        const data = await response.json();
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔍 [Polling] Checking payment status...');
+        console.log('📦 [Polling] Order ID:', orderId);
 
-        if (data.data?.payment?.status === 'hold') {
+        const response = await getPaymentStatus(orderId);
+
+        console.log('📡 [Polling] Response received:', {
+          success: response?.success,
+          hasData: !!response?.data,
+          hasPayment: !!response?.data?.payment,
+          paymentStatus: response?.data?.payment?.status
+        });
+
+        console.log('💳 [Polling] Full payment object:', JSON.stringify(response?.data?.payment, null, 2));
+        console.log('📋 [Polling] Order number:', response?.data?.orderNumber);
+        console.log('🎯 [Polling] Looking for status: "hold"');
+        console.log('✅ [Polling] Current status:', response?.data?.payment?.status);
+
+        if (response?.data?.payment?.status === 'hold') {
+          console.log('🎉 [Polling] SUCCESS! Payment status is HOLD!');
+          console.log('✨ [Polling] Triggering onSuccess callback...');
           setStatus('success');
-          onSuccess?.(data.data);
+          onSuccess?.(response.data);
           clearInterval(pollInterval);
+        } else {
+          console.log('⏳ [Polling] Still waiting... (status is not "hold")');
         }
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       } catch (err) {
-        // Ignore polling errors
+        console.error('❌ [Polling] Error occurred:', err);
+        console.error('📋 [Polling] Error details:', {
+          message: err.message,
+          stack: err.stack
+        });
       }
     }, 3000); // בדוק כל 3 שניות
 
-    return () => clearInterval(pollInterval);
+    return () => {
+      console.log('🛑 [Polling] Stopped polling for order:', orderId);
+      clearInterval(pollInterval);
+    };
   }, [status, orderId, onSuccess]);
 
   return (
@@ -180,29 +205,112 @@ export function PaymentIframe({
 
       {/* Status: Ready - Show IFRAME */}
       {status === 'ready' && paymentUrl && (
-        <div className="relative">
-          {/* IFRAME Container */}
-          <div className="border-2 border-neutral-200 rounded-lg overflow-hidden bg-white">
-            <iframe
-              src={paymentUrl}
-              className="w-full"
-              style={{ height: '500px', minHeight: '500px' }}
-              frameBorder="0"
-              allow="payment"
-              sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
-              title="HyPay Secure Payment"
-            />
+        <>
+          <div className="relative">
+            {/* IFRAME Container */}
+            <div className="border-2 border-neutral-200 rounded-lg overflow-hidden bg-white">
+              <iframe
+                src={paymentUrl}
+                className="w-full"
+                style={{ height: '500px', minHeight: '500px' }}
+                frameBorder="0"
+                allow="payment"
+                sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+                title="HyPay Secure Payment"
+              />
+            </div>
+
+            {/* Cancel Button */}
+            <button
+              onClick={onCancel}
+              className="absolute top-2 left-2 p-2 bg-white rounded-full shadow-md hover:bg-neutral-100"
+              title="ביטול"
+            >
+              <X className="w-4 h-4 text-neutral-600" />
+            </button>
           </div>
 
-          {/* Cancel Button */}
-          <button
-            onClick={onCancel}
-            className="absolute top-2 left-2 p-2 bg-white rounded-full shadow-md hover:bg-neutral-100"
-            title="ביטול"
-          >
-            <X className="w-4 h-4 text-neutral-600" />
-          </button>
-        </div>
+          {/* DEV ONLY - Manual Callback Simulator */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mt-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-yellow-900 mb-2">🔧 מצב פיתוח - סימולציית Callback</p>
+                  <p className="text-yellow-800 text-sm mb-3">
+                    אחרי שתסיים לשלם ב-HyPay, העתק את כל הפרמטרים שהוא מחזיר והדבק אותם כאן:
+                  </p>
+                  <textarea
+                    id="callback-params"
+                    className="w-full p-2 border border-yellow-300 rounded text-sm font-mono h-32 mb-3"
+                    placeholder="הדבק כאן את הפרמטרים מ-HyPay, לדוגמה:&#10;Id=372190517&CCode=700&Amount=209&ACode=0070135&Order=ORD-xxx&..."
+                  />
+                  <button
+                    onClick={async () => {
+                      const rawParams = document.getElementById('callback-params').value.trim();
+                      if (!rawParams) {
+                        alert('אנא הדבק את הפרמטרים מ-HyPay');
+                        return;
+                      }
+
+                      try {
+                        // המר את הפורמט של HyPay לפורמט URL
+                        // מ: "Id : 372194936\nCCode : 700\nAmount : 448"
+                        // ל: "Id=372194936&CCode=700&Amount=448"
+
+                        const paramsObj = {};
+                        rawParams
+                          .split('\n')  // פצל לשורות
+                          .map(line => line.trim())  // נקה רווחים
+                          .filter(line => line.length > 0 && line.includes(':'))  // רק שורות עם ':'
+                          .forEach(line => {
+                            const [key, ...valueParts] = line.split(':');
+                            const value = valueParts.join(':').trim();  // חיבור חזרה במקרה שיש ':' בערך
+                            paramsObj[key.trim()] = value;
+                          });
+
+                        // בדוק האם זה success או error לפי CCode
+                        const ccode = paramsObj.CCode || paramsObj.ccode || '';
+                        const isSuccess = ccode === '0' || ccode === '700' || ccode === '800';
+                        const endpoint = isSuccess ? 'success' : 'error';
+
+                        // המר לפורמט URL
+                        const urlParams = Object.entries(paramsObj)
+                          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+                          .join('&');
+
+                        console.log('📤 Sending callback:', {
+                          endpoint,
+                          ccode,
+                          isSuccess,
+                          params: urlParams.substring(0, 100) + '...'
+                        });
+
+                        // שלח את הפרמטרים ל-callback endpoint המתאים
+                        const response = await fetch(`http://localhost:5000/api/payments/callback/${endpoint}?${urlParams}`);
+
+                        if (response.ok) {
+                          alert('✅ Callback נשלח בהצלחה! הפולינג יזהה את השינוי בעוד מספר שניות...');
+                        } else {
+                          const text = await response.text();
+                          alert(`❌ שגיאה: ${text}`);
+                        }
+                      } catch (err) {
+                        alert(`❌ שגיאה בשליחת Callback: ${err.message}`);
+                      }
+                    }}
+                    className="w-full py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium"
+                  >
+                    📤 שלח Callback לשרת
+                  </button>
+                  <p className="text-xs text-yellow-700 mt-2">
+                    💡 זה ידמה את ה-callback של HyPay ויעדכן את ההזמנה במסד הנתונים
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Security Badges */}

@@ -5,7 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { createOrder } from '@/lib/api/orders';
-import { holdCreditCard } from '@/lib/api/payments';
+import { createPaymentLink } from '@/lib/api/payments';
 import { useAddresses, useCreateAddress } from '@/lib/hooks/useAddresses';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Check, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PaymentForm } from '@/components/checkout/PaymentForm';
+import { PaymentIframe } from '@/components/checkout/PaymentIframe';
 
 // Validation Schema
 const shippingSchema = z.object({
@@ -38,15 +38,16 @@ const shippingSchema = z.object({
 });
 
 export default function CheckoutPage() {
-  const { cart } = useCart();
+  const { cart } = useCart();  // ✅ clearCart הוסר - מתבצע ב-Backend
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // 1 = shipping details, 2 = payment iframe
   const [loading, setLoading] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [saveAddress, setSaveAddress] = useState(true); // Save address by default
-  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [orderId, setOrderId] = useState(null);
+  const [orderNumber, setOrderNumber] = useState(null);
 
   const { data: addressesData, isLoading: addressesLoading } = useAddresses();
   // Handle both array and object with data property
@@ -112,14 +113,7 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // ✅ Step 1: Validate payment details FIRST
-      if (!paymentDetails?.cardNumber || !paymentDetails?.cvv || !paymentDetails?.userId) {
-        toast.error('יש למלא את כל פרטי התשלום');
-        setLoading(false);
-        return;
-      }
-
-      // ✅ Step 2: Prepare order data (but don't create yet!)
+      // ✅ Step 1: Prepare order data
       const orderData = {
         items: cart.items.map(item => ({
           product: item.product._id,
@@ -131,7 +125,7 @@ export default function CheckoutPage() {
         expectedTotal: cart.pricing?.total,
       };
 
-      // ✅ Step 3: Create order
+      // ✅ Step 2: Create order
       const orderResponse = await createOrder(orderData);
       console.log('📦 Order created:', orderResponse);
 
@@ -139,49 +133,10 @@ export default function CheckoutPage() {
         throw new Error('שגיאה ביצירת ההזמנה');
       }
 
-      const orderId = orderResponse.data._id;
+      const newOrderId = orderResponse.data._id;
+      const newOrderNumber = orderResponse.data.orderNumber;
 
-      // ✅ Step 4: Hold credit card (תפיסת מסגרת) - CRITICAL STEP
-      try {
-        // המר מספר כרטיס (הסר רווחים)
-        const cleanCardNumber = paymentDetails.cardNumber.replace(/\s/g, '');
-
-        const holdResponse = await holdCreditCard(orderId, {
-          cardNumber: cleanCardNumber,
-          expMonth: paymentDetails.expMonth,
-          expYear: paymentDetails.expYear,
-          cvv: paymentDetails.cvv,
-          userId: paymentDetails.userId
-        });
-
-        console.log('💳 Payment hold successful:', holdResponse);
-
-        if (!holdResponse?.success) {
-          // Payment hold failed - throw error with specific message
-          const errorMessage = holdResponse?.message || 'כרטיס האשראי נדחה';
-          throw new Error(errorMessage);
-        }
-
-        console.log('✅ Payment hold completed successfully');
-
-      } catch (paymentError) {
-        console.error('❌ Payment hold failed:', paymentError);
-
-        // 🚨 CRITICAL: Payment failed - stay on checkout, keep cart intact
-        toast.error(
-          paymentError.message || 'כרטיס האשראי נדחה',
-          {
-            description: 'אנא נסה כרטיס אחר או צור קשר עם חברת האשראי שלך',
-            duration: 8000,
-          }
-        );
-
-        // Stop here - don't clear cart, don't redirect
-        setLoading(false);
-        return;
-      }
-
-      // ✅ Step 5: Save address if requested (only after successful payment)
+      // ✅ Step 3: Save address if requested
       if (saveAddress && !selectedAddressId) {
         try {
           await createAddressMutation.mutateAsync({
@@ -202,10 +157,10 @@ export default function CheckoutPage() {
         }
       }
 
-      // ✅ Step 6: Clear cart & redirect (only after successful payment)
-      toast.success('ההזמנה נוצרה והתשלום אושר בהצלחה!');
-      queryClient.invalidateQueries({ queryKey: ['cart'] });
-      router.push(`/orders/${orderId}`);
+      // ✅ Step 4: Move to payment step
+      setOrderId(newOrderId);
+      setOrderNumber(newOrderNumber);
+      setStep(2);
 
     } catch (error) {
       console.error('❌ Checkout error:', error);
@@ -234,6 +189,42 @@ export default function CheckoutPage() {
 
   if (!isAuthenticated || cart.items.length === 0) {
     return null;
+  }
+
+  // If step 2 - show payment iframe
+  if (step === 2 && orderId) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Header */}
+        <div className="border-b border-neutral-200">
+          <div className="container mx-auto px-4 py-8">
+            <h1 className="text-4xl font-light tracking-widest uppercase text-center">תשלום מאובטח</h1>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-12">
+          <PaymentIframe
+            orderId={orderId}
+            amount={cart.pricing?.total}
+            onSuccess={() => {
+              toast.success('התשלום אושר בהצלחה!');
+              // ✅ העגלה כבר נמחקה ב-Backend (paymentController.js)
+              // פשוט נסמן ל-React Query שצריך לרענן
+              queryClient.invalidateQueries({ queryKey: ['cart'] });
+              router.push(`/orders/${orderId}?payment=success`);
+            }}
+            onError={(error) => {
+              toast.error(error || 'התשלום נכשל');
+              setStep(1); // חזרה לשלב 1 - העגלה עדיין קיימת!
+            }}
+            onCancel={() => {
+              toast.info('התשלום בוטל');
+              setStep(1); // חזרה לשלב 1 - העגלה עדיין קיימת!
+            }}
+          />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -327,14 +318,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
             )}
-
-            {/* Payment Form */}
-            <div className="mb-8">
-              <PaymentForm
-                onPaymentDetailsChange={setPaymentDetails}
-                totalAmount={cart.pricing?.total || 0}
-              />
-            </div>
 
             <div className="border border-neutral-200 p-6">
               <h2 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-6">פרטי משלוח</h2>
@@ -597,17 +580,11 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={loading || !paymentDetails?.cardNumber}
+                disabled={loading}
                 className="w-full py-4 bg-black text-white text-sm font-light tracking-widest uppercase hover:bg-neutral-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-3"
               >
-                {loading ? 'מעבד...' : 'אשר והזמן'}
+                {loading ? 'מעבד...' : 'המשך לתשלום'}
               </button>
-
-              {!paymentDetails?.cardNumber && (
-                <p className="text-xs text-center text-neutral-500 mt-2">
-                  יש למלא פרטי תשלום
-                </p>
-              )}
 
               <button
                 type="button"
