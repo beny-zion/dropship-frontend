@@ -32,6 +32,8 @@ import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
 import ManualStatusOverrideModal from '@/components/admin/orders/ManualStatusOverrideModal';
 import ManualOrderStatusOverrideModal from '@/components/admin/orders/ManualOrderStatusOverrideModal';
 import StatusHistoryAccordion from '@/components/admin/orders/StatusHistoryAccordion';
+import RefundModal from '@/components/admin/orders/RefundModal';
+import ManualChargeModal from '@/components/admin/orders/ManualChargeModal';
 import { CopyableText } from '@/components/admin/CopyButton';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
@@ -61,6 +63,8 @@ export default function OrderDetailPage() {
   const [manualOverrideModal, setManualOverrideModal] = useState(null); // Phase 9.3 - items
   const [manualOrderOverrideModal, setManualOrderOverrideModal] = useState(false); // Phase 9.3 - order
   const [statusSuggestion, setStatusSuggestion] = useState(null);
+  const [refundModalOpen, setRefundModalOpen] = useState(false); // Phase 10 - refunds
+  const [chargeModalOpen, setChargeModalOpen] = useState(false); // Phase 10 - manual charge
 
   // Fetch order
   const { data, isLoading } = useQuery({
@@ -821,6 +825,75 @@ export default function OrderDetailPage() {
                 </div>
               )}
 
+              {/* Refunded Amount - Phase 10 */}
+              {/* Phase 10 - DISABLED */}
+              {/* {order.payment?.refundedAmount > 0 && (
+                <div>
+                  <p className="text-gray-500">סכום שהוחזר:</p>
+                  <p className="font-medium text-orange-600">₪{order.payment.refundedAmount.toLocaleString()}</p>
+                </div>
+              )} */}
+
+              {/* Refund Button - Phase 10 - DISABLED */}
+              {/* {['charged', 'partial_refund'].includes(order.payment?.status) && (
+                <div className="pt-3 border-t">
+                  <button
+                    onClick={() => setRefundModalOpen(true)}
+                    className="w-full px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium hover:bg-orange-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    בצע החזר כספי
+                  </button>
+                </div>
+              )} */}
+
+              {/* Manual Charge Button - Phase 10 - DISABLED */}
+              {/* {['hold', 'ready_to_charge', 'failed', 'partial_charge'].includes(order.payment?.status) && (
+                <div className="pt-3 border-t">
+                  <button
+                    onClick={() => setChargeModalOpen(true)}
+                    className="w-full px-4 py-2 bg-green-100 text-green-700 rounded-md text-sm font-medium hover:bg-green-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    גביה מידית
+                  </button>
+                </div>
+              )} */}
+
+              {/* Refunds History - Phase 10 - DISABLED */}
+              {/* {order.refunds && order.refunds.length > 0 && (
+                <div className="pt-3 border-t">
+                  <p className="text-gray-500 mb-2">היסטוריית החזרים:</p>
+                  <div className="space-y-2">
+                    {order.refunds.map((refund, idx) => (
+                      <div key={idx} className="text-xs bg-orange-50 p-2 rounded border border-orange-200">
+                        <div className="flex items-center justify-between">
+                          <span className={`font-medium ${refund.status === 'completed' ? 'text-green-700' : 'text-red-700'}`}>
+                            ₪{refund.amount?.toLocaleString()}
+                          </span>
+                          <span className="text-gray-500">
+                            {new Date(refund.createdAt).toLocaleString('he-IL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-gray-600 mt-1">{refund.reason}</p>
+                        {refund.hypRefundId && (
+                          <p className="text-gray-400 mt-1">מזהה: {refund.hypRefundId}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )} */}
+
               {/* Payment Method */}
               {order.payment?.method && (
                 <div>
@@ -947,6 +1020,28 @@ export default function OrderDetailPage() {
           isLoading={manualOrderOverrideMutation.isPending}
         />
       )}
+
+      {/* Phase 10: Refund Modal - DISABLED */}
+      {/* <RefundModal
+        orderId={params.id}
+        isOpen={refundModalOpen}
+        onClose={() => setRefundModalOpen(false)}
+        onRefundComplete={() => {
+          queryClient.invalidateQueries(['admin', 'order', params.id]);
+          toast.success('ההחזר בוצע בהצלחה');
+        }}
+      /> */}
+
+      {/* Phase 10: Manual Charge Modal - DISABLED */}
+      {/* <ManualChargeModal
+        order={order}
+        isOpen={chargeModalOpen}
+        onClose={() => setChargeModalOpen(false)}
+        onChargeComplete={() => {
+          queryClient.invalidateQueries(['admin', 'order', params.id]);
+          toast.success('הגביה בוצעה בהצלחה');
+        }}
+      /> */}
     </div>
   );
 }
