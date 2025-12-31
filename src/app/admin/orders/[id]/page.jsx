@@ -16,7 +16,8 @@ import {
   MapPin,
   CreditCard,
   ShoppingBag,
-  ExternalLink
+  ExternalLink,
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -28,6 +29,11 @@ import OrderFromSupplierModal from '@/components/admin/orders/OrderFromSupplierM
 import CancelItemModal from '@/components/admin/orders/CancelItemModal';
 import { AddTrackingModal } from '@/components/admin/orders/AddTrackingModal';
 import OrderMinimumWarning from '@/components/admin/orders/OrderMinimumWarning';
+import ManualStatusOverrideModal from '@/components/admin/orders/ManualStatusOverrideModal';
+import ManualOrderStatusOverrideModal from '@/components/admin/orders/ManualOrderStatusOverrideModal';
+import StatusHistoryAccordion from '@/components/admin/orders/StatusHistoryAccordion';
+import RefundModal from '@/components/admin/orders/RefundModal';
+import ManualChargeModal from '@/components/admin/orders/ManualChargeModal';
 import { CopyableText } from '@/components/admin/CopyButton';
 import { ITEM_STATUS } from '@/lib/constants/itemStatuses';
 import {
@@ -35,7 +41,8 @@ import {
   orderItemFromSupplier,
   cancelOrderItem,
   updateIsraelTracking,
-  updateCustomerTracking
+  updateCustomerTracking,
+  manualStatusOverride
 } from '@/lib/api/orderItems';
 
 // ✅ ייבוא מקור מרכזי לסטטוסים
@@ -53,7 +60,11 @@ export default function OrderDetailPage() {
   const [orderSupplierModal, setOrderSupplierModal] = useState(null);
   const [cancelModal, setCancelModal] = useState(null);
   const [trackingModal, setTrackingModal] = useState(null); // { itemId, type: 'israel' | 'customer' }
+  const [manualOverrideModal, setManualOverrideModal] = useState(null); // Phase 9.3 - items
+  const [manualOrderOverrideModal, setManualOrderOverrideModal] = useState(false); // Phase 9.3 - order
   const [statusSuggestion, setStatusSuggestion] = useState(null);
+  const [refundModalOpen, setRefundModalOpen] = useState(false); // Phase 10 - refunds
+  const [chargeModalOpen, setChargeModalOpen] = useState(false); // Phase 10 - manual charge
 
   // Fetch order
   const { data, isLoading } = useQuery({
@@ -163,6 +174,42 @@ export default function OrderDetailPage() {
     }
   });
 
+  // ✅ Phase 9.3: Mutation לנעילת/שחרור סטטוס ידני
+  const manualOverrideMutation = useMutation({
+    mutationFn: ({ itemId, data }) => manualStatusOverride(params.id, itemId, data),
+    onSuccess: (response) => {
+      const message = response.data?.message || 'הפעולה בוצעה בהצלחה';
+      toast.success(message);
+
+      if (response.data?.warning) {
+        toast.warning(response.data.warning, { duration: 5000 });
+      }
+
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
+      setManualOverrideModal(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'שגיאה בנעילת הסטטוס');
+    }
+  });
+
+  // Phase 9.3: Manual override for ORDER status
+  const manualOrderOverrideMutation = useMutation({
+    mutationFn: (data) => adminApi.manualOrderStatusOverride(params.id, data),
+    onSuccess: (response) => {
+      const message = response.data?.message || 'הפעולה בוצעה בהצלחה';
+      toast.success(message);
+      if (response.data?.warning) {
+        toast.warning(response.data.warning, { duration: 5000 });
+      }
+      queryClient.invalidateQueries(['admin', 'order', params.id]);
+      setManualOrderOverrideModal(false);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'שגיאה בנעילת הסטטוס');
+    }
+  });
+
   const handleOrderFromSupplier = (item) => {
     setOrderSupplierModal(item);
   };
@@ -228,21 +275,38 @@ export default function OrderDetailPage() {
           <Badge className={statusConfig[order.status]?.className + ' text-base px-4 py-2'}>
             {statusConfig[order.status]?.label || order.status}
           </Badge>
-          <select
-            value={order.status}
-            onChange={(e) => {
-              if (window.confirm(`האם לעדכן את סטטוס ההזמנה ל-${statusConfig[e.target.value]?.label}?`)) {
-                updateOrderStatusMutation.mutate(e.target.value);
-              }
-            }}
-            className="text-sm border border-gray-300 rounded px-3 py-1.5 focus:border-blue-500 focus:outline-none"
-          >
-            {Object.entries(statusConfig).map(([value, config]) => (
-              <option key={value} value={value}>
-                {config.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              value={order.status}
+              onChange={(e) => {
+                if (window.confirm(`האם לעדכן את סטטוס ההזמנה ל-${statusConfig[e.target.value]?.label}?`)) {
+                  updateOrderStatusMutation.mutate(e.target.value);
+                }
+              }}
+              className={`text-sm border rounded px-3 py-1.5 focus:outline-none ${
+                order.manualStatusOverride
+                  ? 'border-amber-400 bg-amber-50 focus:border-amber-600'
+                  : 'border-gray-300 focus:border-blue-500'
+              }`}
+            >
+              {Object.entries(statusConfig).map(([value, config]) => (
+                <option key={value} value={value}>
+                  {config.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setManualOrderOverrideModal(true)}
+              className={`text-lg px-2 py-1 rounded transition-colors ${
+                order.manualStatusOverride
+                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-700'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+              }`}
+              title={order.manualStatusOverride ? 'סטטוס ההזמנה נעול - לחץ לעריכה' : 'נעל סטטוס ידנית'}
+            >
+              {order.manualStatusOverride ? '🔒' : '🔓'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -466,43 +530,6 @@ export default function OrderDetailPage() {
                             )}
                           </div>
                         )}
-
-                        {/* ✅ Item Status History */}
-                        {item.statusHistory && item.statusHistory.length > 0 && (
-                          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded">
-                            <p className="text-sm font-medium text-gray-900 mb-2">
-                              📋 היסטוריית סטטוסים ({item.statusHistory.length})
-                            </p>
-                            <div className="space-y-1.5">
-                              {item.statusHistory.map((history, historyIdx) => (
-                                <div key={historyIdx} className="flex flex-col text-xs bg-white p-2 rounded border border-gray-200">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                      <ItemStatusBadge status={history.status} />
-                                    </div>
-                                    <span className="text-gray-500 whitespace-nowrap">
-                                      {new Date(history.changedAt).toLocaleString('he-IL', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </span>
-                                  </div>
-                                  {history.notes && (
-                                    <p className="text-gray-600 mr-4 text-xs">{history.notes}</p>
-                                  )}
-                                  {history.changedBy && (
-                                    <p className="text-gray-400 mr-4 text-xs mt-1">
-                                      על ידי: {history.changedBy.firstName} {history.changedBy.lastName}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
 
@@ -529,6 +556,19 @@ export default function OrderDetailPage() {
                             onSelect={(newStatus) => handleStatusChange(item._id, newStatus)}
                             disabled={updateStatusMutation.isPending}
                           />
+                        )}
+
+                        {/* Phase 9.3: Manual Override Lock Button */}
+                        {!isPending && (
+                          <Button
+                            variant={item.manualStatusOverride ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setManualOverrideModal(item)}
+                            className={item.manualStatusOverride ? "bg-amber-600 hover:bg-amber-700 text-white" : "text-neutral-600"}
+                            title={item.manualStatusOverride ? "סטטוס נעול - האוטומציה לא תשנה" : "נעל סטטוס (למקרים חריגים)"}
+                          >
+                            {item.manualStatusOverride ? '🔒 נעול' : '🔓'}
+                          </Button>
                         )}
 
                         {/* Supplier Link */}
@@ -577,6 +617,16 @@ export default function OrderDetailPage() {
                           בטל פריט
                         </Button>
                       </div>
+                    )}
+
+                    {/* Status History Accordion */}
+                    {item.statusHistory && item.statusHistory.length > 0 && (
+                      <StatusHistoryAccordion
+                        title="היסטוריית סטטוס הפריט"
+                        history={item.statusHistory}
+                        type="item"
+                        defaultOpen={false}
+                      />
                     )}
                   </div>
                 );
@@ -775,6 +825,75 @@ export default function OrderDetailPage() {
                 </div>
               )}
 
+              {/* Refunded Amount - Phase 10 */}
+              {/* Phase 10 - DISABLED */}
+              {/* {order.payment?.refundedAmount > 0 && (
+                <div>
+                  <p className="text-gray-500">סכום שהוחזר:</p>
+                  <p className="font-medium text-orange-600">₪{order.payment.refundedAmount.toLocaleString()}</p>
+                </div>
+              )} */}
+
+              {/* Refund Button - Phase 10 - DISABLED */}
+              {/* {['charged', 'partial_refund'].includes(order.payment?.status) && (
+                <div className="pt-3 border-t">
+                  <button
+                    onClick={() => setRefundModalOpen(true)}
+                    className="w-full px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium hover:bg-orange-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    בצע החזר כספי
+                  </button>
+                </div>
+              )} */}
+
+              {/* Manual Charge Button - Phase 10 - DISABLED */}
+              {/* {['hold', 'ready_to_charge', 'failed', 'partial_charge'].includes(order.payment?.status) && (
+                <div className="pt-3 border-t">
+                  <button
+                    onClick={() => setChargeModalOpen(true)}
+                    className="w-full px-4 py-2 bg-green-100 text-green-700 rounded-md text-sm font-medium hover:bg-green-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    גביה מידית
+                  </button>
+                </div>
+              )} */}
+
+              {/* Refunds History - Phase 10 - DISABLED */}
+              {/* {order.refunds && order.refunds.length > 0 && (
+                <div className="pt-3 border-t">
+                  <p className="text-gray-500 mb-2">היסטוריית החזרים:</p>
+                  <div className="space-y-2">
+                    {order.refunds.map((refund, idx) => (
+                      <div key={idx} className="text-xs bg-orange-50 p-2 rounded border border-orange-200">
+                        <div className="flex items-center justify-between">
+                          <span className={`font-medium ${refund.status === 'completed' ? 'text-green-700' : 'text-red-700'}`}>
+                            ₪{refund.amount?.toLocaleString()}
+                          </span>
+                          <span className="text-gray-500">
+                            {new Date(refund.createdAt).toLocaleString('he-IL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-gray-600 mt-1">{refund.reason}</p>
+                        {refund.hypRefundId && (
+                          <p className="text-gray-400 mt-1">מזהה: {refund.hypRefundId}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )} */}
+
               {/* Payment Method */}
               {order.payment?.method && (
                 <div>
@@ -825,42 +944,21 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* ✅ Order Timeline */}
+      {/* ✅ Order Timeline - Accordion */}
       {order.timeline && order.timeline.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
-            <Package className="w-5 h-5" />
-            ציר זמן של ההזמנה ({order.timeline.length} אירועים)
-          </h2>
-          <div className="space-y-4">
-            {order.timeline.map((event, index) => (
-              <div key={index} className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                  {index < order.timeline.length - 1 && (
-                    <div className="w-px h-full bg-gray-300 my-1"></div>
-                  )}
-                </div>
-                <div className="flex-1 pb-4">
-                  <div className="flex items-start justify-between">
-                    <p className="font-medium text-sm text-gray-900">{event.message}</p>
-                    <p className="text-xs text-gray-500 mr-4 whitespace-nowrap">
-                      {new Date(event.timestamp).toLocaleString('he-IL', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                  {event.details && (
-                    <p className="text-xs text-gray-600 mt-1">{event.details}</p>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="w-5 h-5 text-neutral-700" />
+            <h2 className="text-lg font-semibold text-neutral-900">
+              ציר זמן של ההזמנה
+            </h2>
           </div>
+          <StatusHistoryAccordion
+            title={`היסטוריה מלאה (${order.timeline.length} אירועים)`}
+            history={order.timeline}
+            type="order"
+            defaultOpen={false}
+          />
         </div>
       )}
 
@@ -899,6 +997,51 @@ export default function OrderDetailPage() {
           })}
         />
       )}
+
+      {/* Phase 9.3: Manual Status Override Modal */}
+      {manualOverrideModal && (
+        <ManualStatusOverrideModal
+          item={manualOverrideModal}
+          onClose={() => setManualOverrideModal(null)}
+          onConfirm={(data) => manualOverrideMutation.mutate({
+            itemId: manualOverrideModal._id,
+            data
+          })}
+          isLoading={manualOverrideMutation.isPending}
+        />
+      )}
+
+      {/* Phase 9.3: Manual Order Status Override Modal */}
+      {manualOrderOverrideModal && (
+        <ManualOrderStatusOverrideModal
+          order={order}
+          onClose={() => setManualOrderOverrideModal(false)}
+          onConfirm={(data) => manualOrderOverrideMutation.mutate(data)}
+          isLoading={manualOrderOverrideMutation.isPending}
+        />
+      )}
+
+      {/* Phase 10: Refund Modal - DISABLED */}
+      {/* <RefundModal
+        orderId={params.id}
+        isOpen={refundModalOpen}
+        onClose={() => setRefundModalOpen(false)}
+        onRefundComplete={() => {
+          queryClient.invalidateQueries(['admin', 'order', params.id]);
+          toast.success('ההחזר בוצע בהצלחה');
+        }}
+      /> */}
+
+      {/* Phase 10: Manual Charge Modal - DISABLED */}
+      {/* <ManualChargeModal
+        order={order}
+        isOpen={chargeModalOpen}
+        onClose={() => setChargeModalOpen(false)}
+        onChargeComplete={() => {
+          queryClient.invalidateQueries(['admin', 'order', params.id]);
+          toast.success('הגביה בוצעה בהצלחה');
+        }}
+      /> */}
     </div>
   );
 }

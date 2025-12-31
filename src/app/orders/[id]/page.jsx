@@ -359,28 +359,30 @@ export default function OrderDetailsPage() {
             </div>
           </div>
 
-          {/* Timeline */}
-          <div className="border border-neutral-200 p-6">
-            <h2 className="text-lg font-normal tracking-wide mb-6">מעקב הזמנה</h2>
-            <div className="space-y-4">
-              {order.timeline.map((event, index) => (
-                <div key={index} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-3 h-3 bg-black"></div>
-                    {index < order.timeline.length - 1 && (
-                      <div className="w-px h-full bg-neutral-300 my-1"></div>
-                    )}
+          {/* Timeline - already filtered by backend (Phase 9.4) */}
+          {order.timeline && order.timeline.length > 0 && (
+            <div className="border border-neutral-200 p-6">
+              <h2 className="text-lg font-normal tracking-wide mb-6">מעקב הזמנה</h2>
+              <div className="space-y-4">
+                {order.timeline.map((event, index) => (
+                  <div key={index} className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className="w-3 h-3 bg-black"></div>
+                      {index < order.timeline.length - 1 && (
+                        <div className="w-px h-full bg-neutral-300 my-1"></div>
+                      )}
+                    </div>
+                    <div className="flex-1 pb-4">
+                      <p className="font-normal text-sm">{event.message}</p>
+                      <p className="text-xs font-light text-neutral-600 mt-1">
+                        {new Date(event.timestamp).toLocaleString('he-IL')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 pb-4">
-                    <p className="font-normal text-sm">{event.message}</p>
-                    <p className="text-xs font-light text-neutral-600 mt-1">
-                      {new Date(event.timestamp).toLocaleString('he-IL')}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Sidebar */}

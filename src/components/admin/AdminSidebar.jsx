@@ -14,7 +14,8 @@ import {
   Home,
   Image,
   Settings,
-  ClipboardCheck
+  ClipboardCheck,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
@@ -60,6 +61,12 @@ const navItems = [
       }
     ]
   },
+  // Phase 10 - DISABLED
+  // {
+  //   name: 'החזרים',
+  //   href: '/admin/refunds',
+  //   icon: RotateCcw
+  // },
   {
     name: 'משתמשים',
     href: '/admin/users',
