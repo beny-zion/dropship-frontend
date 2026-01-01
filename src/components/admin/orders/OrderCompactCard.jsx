@@ -29,7 +29,7 @@ function StatusBadge({ status, size = 'default' }) {
   );
 }
 
-export default function OrderCompactCard({ order, onQuickAction }) {
+export default function OrderCompactCard({ order, onQuickAction, isSelected, onSelect }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const urgencyLevel = getUrgencyLevel(order);
@@ -39,10 +39,23 @@ export default function OrderCompactCard({ order, onQuickAction }) {
   const stats = order.statistics || {};
 
   return (
-    <div className="p-4 hover:bg-neutral-50 transition-colors border-b border-neutral-200 last:border-b-0">
+    <div className={`p-4 hover:bg-neutral-50 transition-colors border-b border-neutral-200 last:border-b-0 ${isSelected ? 'bg-blue-50' : ''}`}>
       {/* Header - תמיד גלוי */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3 flex-1">
+          {/* Selection Checkbox */}
+          {onSelect && (
+            <input
+              type="checkbox"
+              checked={isSelected || false}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSelect(order);
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+            />
+          )}
+
           {/* Urgency Indicator */}
           <div
             className={`

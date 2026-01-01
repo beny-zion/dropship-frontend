@@ -162,6 +162,11 @@ export const adminApi = {
     return await apiClient.post('/admin/orders/items/bulk-order-from-supplier', data);
   },
 
+  // ✅ Phase 11: Bulk Update Order Status
+  bulkUpdateOrderStatus: async (orderIds, status) => {
+    return await apiClient.post('/admin/orders/bulk-update-status', { orderIds, status });
+  },
+
   // ============================================
   // SYSTEM SETTINGS
   // ============================================

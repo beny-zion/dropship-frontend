@@ -21,17 +21,18 @@ export default function OrderSearchBar({ onSearch, isLoading }) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 rounded-lg p-4">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="חפש לפי מספר הזמנה, שם לקוח או אימייל..."
-            className="w-full pr-10 pl-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={isLoading}
-          />
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="חפש לפי מספר הזמנה, שם לקוח או אימייל..."
+              className="w-full pr-10 pl-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={isLoading}
+            />
           {searchTerm && (
             <button
               type="button"
@@ -52,11 +53,19 @@ export default function OrderSearchBar({ onSearch, isLoading }) {
         </Button>
       </div>
 
+      {/* Search Tips */}
+      {!searchTerm && (
+        <div className="text-xs text-gray-500">
+          💡 ניתן לחפש לפי: מספר הזמנה (ORD-xxx), שם לקוח, אימייל, או טלפון
+        </div>
+      )}
+
       {searchTerm && (
-        <div className="mt-2 text-sm text-neutral-600">
+        <div className="text-sm text-neutral-600">
           מחפש: <span className="font-medium">{searchTerm}</span>
         </div>
       )}
+      </div>
     </form>
   );
 }
