@@ -360,7 +360,7 @@ export default function ProductEditPage() {
         stock: {
           // ❌ NO available field!
           quantity: data['stock.trackInventory'] ? parseInt(data['stock.quantity']) : null,
-          trackInventory: data['stock.trackInventory'] === true,
+          trackInventory: !!data['stock.trackInventory'], // ✅ תיקון: המרה לבוליאני
           lowStockThreshold: parseInt(data['stock.lowStockThreshold']) || 5
         },
         shipping: {
