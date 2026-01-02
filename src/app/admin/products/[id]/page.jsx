@@ -34,7 +34,8 @@ export default function ProductEditPage() {
       name_en: '',
       description_he: '',
       description_en: '',
-      category: '',
+      categories: [], // מערך קטגוריות חדש
+      category: '', // לתאימות לאחור
       subcategory: '',
       tags: '',
       // מחירים
@@ -130,13 +131,40 @@ export default function ProductEditPage() {
   // Set form values when product data loads
   useEffect(() => {
     if (product) {
+      // המרת קטגוריות למערך IDs
+      let categoriesArray = [];
+
+      // בדיקה אם יש מערך קטגוריות
+      if (product.categories && Array.isArray(product.categories) && product.categories.length > 0) {
+        // יש מערך קטגוריות חדש - המר אותן ל-IDs
+        categoriesArray = product.categories.map(cat => {
+          if (typeof cat === 'object' && cat !== null) {
+            // אם זה אובייקט populated, קח את ה-_id
+            return cat._id || cat.$oid;
+          }
+          // אם זה כבר ObjectId string
+          return cat;
+        }).filter(Boolean); // הסר nulls
+      } else if (product.category) {
+        // אין מערך - השתמש בקטגוריה היחידה הישנה
+        const categoryId = typeof product.category === 'object'
+          ? (product.category._id || product.category.$oid)
+          : product.category;
+        if (categoryId) {
+          categoriesArray = [categoryId];
+        }
+      }
+
+      console.log('🔍 Loading product categories:', categoriesArray);
+
       reset({
         asin: product.asin || '',
         name_he: product.name_he || '',
         name_en: product.name_en || '',
         description_he: product.description_he || '',
         description_en: product.description_en || '',
-        category: product.category?._id || product.category || '',
+        categories: categoriesArray,
+        category: product.category?._id || product.category || '', // לתאימות לאחור
         subcategory: product.subcategory || '',
         tags: Array.isArray(product.tags) ? product.tags.join(', ') : '',
         'price.ils': product.price?.ils || 0,
@@ -300,7 +328,7 @@ export default function ProductEditPage() {
         name_en: data.name_en,
         description_he: data.description_he,
         description_en: data.description_en,
-        category: data.category,
+        categories: data.categories || [], // מערך קטגוריות חדש
         subcategory: data.subcategory,
         tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         price: {
@@ -584,43 +612,87 @@ export default function ProductEditPage() {
                   )}
                 </div>
 
-                {/* Category */}
+                {/* Categories - Multi Select */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="category" className={formValues.category ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                      קטגוריה * {formValues.category && "✓"}
+                    <Label
+                      htmlFor="categories"
+                      className={formValues.categories?.length > 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}
+                    >
+                      קטגוריות * (אפשר לבחור כמה) {formValues.categories?.length > 0 && `✓ (${formValues.categories.length})`}
                     </Label>
-                    <div className="flex gap-2">
-                      <select
-                        id="category"
-                        {...register('category', { required: 'שדה חובה' })}
-                        disabled={categoriesLoading}
-                        className={`mt-1 flex-1 px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          formValues.category
-                            ? 'border-green-300 bg-green-50 focus:bg-white'
-                            : 'border-red-300 bg-red-50 focus:bg-white'
-                        }`}
-                      >
-                        <option value="">
-                          {categoriesLoading ? 'טוען קטגוריות...' : 'בחר קטגוריה'}
-                        </option>
-                        {categories.map((category) => (
-                          <option key={category._id} value={category._id}>
-                            {category.name.he}
-                          </option>
-                        ))}
-                      </select>
-                      {categories.length === 0 && !categoriesLoading && (
-                        <Link href="/admin/categories" target="_blank">
-                          <Button type="button" variant="outline" size="sm" className="mt-1">
-                            <FolderPlus className="w-4 h-4 ml-1" />
-                            צור קטגוריה
-                          </Button>
-                        </Link>
+
+                    <div className={`mt-2 border-2 rounded-lg p-3 max-h-48 overflow-y-auto ${
+                      formValues.categories?.length > 0
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-red-300 bg-red-50'
+                    }`}>
+                      {categoriesLoading ? (
+                        <p className="text-sm text-gray-500">טוען קטגוריות...</p>
+                      ) : categories.length === 0 ? (
+                        <div className="text-center">
+                          <p className="text-sm text-gray-500 mb-2">אין קטגוריות במערכת</p>
+                          <Link href="/admin/categories" target="_blank">
+                            <Button type="button" variant="outline" size="sm">
+                              <FolderPlus className="w-4 h-4 ml-1" />
+                              צור קטגוריה
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : (
+                        <Controller
+                          name="categories"
+                          control={control}
+                          rules={{
+                            validate: value => (value && value.length > 0) || 'יש לבחור לפחות קטגוריה אחת'
+                          }}
+                          render={({ field }) => (
+                            <div className="space-y-2">
+                              {categories.map((category) => {
+                                const isChecked = field.value?.includes(category._id);
+                                return (
+                                  <label
+                                    key={category._id}
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-white/50 p-2 rounded transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const newValue = e.target.checked
+                                          ? [...(field.value || []), category._id]
+                                          : (field.value || []).filter(id => id !== category._id);
+                                        field.onChange(newValue);
+                                      }}
+                                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className={`text-sm ${isChecked ? 'font-semibold text-green-800' : 'text-gray-700'}`}>
+                                      {category.name.he}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        />
                       )}
                     </div>
-                    {errors.category && (
-                      <p className="text-sm text-red-600 mt-1">{errors.category.message}</p>
+                    {errors.categories && (
+                      <p className="text-sm text-red-600 mt-1">{errors.categories.message}</p>
+                    )}
+
+                    {/* הצגת הקטגוריות שנבחרו */}
+                    {formValues.categories?.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {formValues.categories.map(catId => {
+                          const cat = categories.find(c => c._id === catId);
+                          return cat ? (
+                            <span key={catId} className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                              {cat.name.he}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
                     )}
                   </div>
 
