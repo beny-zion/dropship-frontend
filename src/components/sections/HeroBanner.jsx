@@ -1,14 +1,29 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function HeroBanner({ section, language = 'he' }) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
   const { heroBanner } = section.content;
   const images = heroBanner.images || [];
   const text = heroBanner.text?.[language] || {};
   const styling = heroBanner.styling || {};
   const autoplay = heroBanner.autoplay || {};
   const overlay = heroBanner.overlay || {};
+
+  // Handle responsive detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (autoplay.enabled && images.length > 1) {
@@ -39,7 +54,7 @@ export default function HeroBanner({ section, language = 'he' }) {
   }
 
   const currentImage = images[currentSlide];
-  const imageUrl = window.innerWidth < 768
+  const imageUrl = isMobile
     ? currentImage.mobile?.url || currentImage.desktop?.url
     : currentImage.desktop?.url;
 

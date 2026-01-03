@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/products/ProductCard';
+import CategorySchema from '@/components/seo/CategorySchema';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Home } from 'lucide-react';
 
@@ -58,7 +59,8 @@ async function getCategoryProducts(categoryId, page = 1, limit = 12) {
 // ============================================
 
 export async function generateMetadata({ params }) {
-  const category = await getCategory(params.slug);
+  const resolvedParams = await params;
+  const category = await getCategory(resolvedParams.slug);
 
   if (!category) {
     return {
@@ -79,7 +81,7 @@ export async function generateMetadata({ params }) {
       type: 'website',
     },
     alternates: {
-      canonical: `/categories/${params.slug}`,
+      canonical: `/categories/${resolvedParams.slug}`,
     },
   };
 }
@@ -89,20 +91,34 @@ export async function generateMetadata({ params }) {
 // ============================================
 
 export default async function CategoryPage({ params, searchParams }) {
-  const category = await getCategory(params.slug);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const category = await getCategory(resolvedParams.slug);
 
   if (!category) {
     notFound();
   }
 
-  const page = parseInt(searchParams?.page) || 1;
+  const page = parseInt(resolvedSearchParams?.page) || 1;
   const { products, pagination } = await getCategoryProducts(category._id, page);
 
   const name = category.name?.he || category.name?.en || 'קטגוריה';
   const description = category.description?.he || category.description?.en || '';
+  const categoryUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.torinoil.com'}/categories/${resolvedParams.slug}`;
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <CategorySchema
+        category={{
+          name_he: category.name?.he,
+          name_en: category.name?.en,
+          description_he: category.description?.he,
+          description_en: category.description?.en
+        }}
+        url={categoryUrl}
+        productCount={pagination.total || products.length}
+      />
+      <div className="min-h-screen bg-white">
       {/* Breadcrumbs - Minimal & Clean */}
       <div className="bg-white border-b border-neutral-200">
         <div className="container mx-auto px-4 py-4">
@@ -191,7 +207,7 @@ export default async function CategoryPage({ params, searchParams }) {
             {pagination.pages > 1 && (
               <div className="flex justify-center items-center gap-3 pt-8 border-t border-neutral-200">
                 {page > 1 && (
-                  <Link href={`/categories/${params.slug}?page=${page - 1}`}>
+                  <Link href={`/categories/${resolvedParams.slug}?page=${page - 1}`}>
                     <button className="px-4 py-2 text-sm font-light tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300">
                       הקודם
                     </button>
@@ -215,7 +231,7 @@ export default async function CategoryPage({ params, searchParams }) {
                       Math.abs(pageNum - page) <= 1
                     ) {
                       return (
-                        <Link key={pageNum} href={`/categories/${params.slug}?page=${pageNum}`}>
+                        <Link key={pageNum} href={`/categories/${resolvedParams.slug}?page=${pageNum}`}>
                           <button
                             className={`min-w-[40px] px-3 py-2 text-sm font-light tracking-wider transition-all duration-300 ${
                               page === pageNum
@@ -235,7 +251,7 @@ export default async function CategoryPage({ params, searchParams }) {
                 </div>
 
                 {page < pagination.pages && (
-                  <Link href={`/categories/${params.slug}?page=${page + 1}`}>
+                  <Link href={`/categories/${resolvedParams.slug}?page=${page + 1}`}>
                     <button className="px-4 py-2 text-sm font-light tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300">
                       הבא
                     </button>
@@ -262,6 +278,7 @@ export default async function CategoryPage({ params, searchParams }) {
         </div>
       )}
     </div>
+    </>
   );
 }
 
