@@ -15,7 +15,8 @@ import {
   Image,
   Settings,
   ClipboardCheck,
-  RotateCcw
+  RotateCcw,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
@@ -71,6 +72,11 @@ const navItems = [
     name: 'משתמשים',
     href: '/admin/users',
     icon: Users
+  },
+  {
+    name: 'ניהול מיילים',
+    href: '/admin/email',
+    icon: Mail
   },
   {
     name: 'ניהול מדיה',

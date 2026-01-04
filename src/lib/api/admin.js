@@ -219,6 +219,35 @@ export const adminApi = {
 
   updateProductAvailability: async (productId, data) => {
     return await apiClient.patch(`/admin/products/${productId}/availability`, data);
+  },
+
+  // ============================================
+  // EMAIL MANAGEMENT
+  // ============================================
+
+  // Send delivery confirmation email
+  sendDeliveryEmail: async (orderId) => {
+    return await apiClient.post(`/admin/orders/${orderId}/send-delivery-email`);
+  },
+
+  // Send custom email to customer (related to order)
+  sendCustomEmailToCustomer: async (orderId, emailData) => {
+    return await apiClient.post(`/admin/orders/${orderId}/send-custom-email`, emailData);
+  },
+
+  // Get customers list for email sending
+  getCustomersForEmail: async (search = '') => {
+    return await apiClient.get('/admin/email/customers', { params: { search } });
+  },
+
+  // Send bulk email to multiple customers
+  sendBulkEmail: async (data) => {
+    return await apiClient.post('/admin/email/send-bulk', data);
+  },
+
+  // Send email to external address
+  sendExternalEmail: async (data) => {
+    return await apiClient.post('/admin/email/send-external', data);
   }
 };
 
