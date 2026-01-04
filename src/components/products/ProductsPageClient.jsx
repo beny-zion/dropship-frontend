@@ -8,6 +8,7 @@ import ProductFilters from '@/components/products/ProductFilters';
 import SearchBar from '@/components/products/SearchBar';
 import Loading from '@/components/shared/Loading';
 import ErrorMessage from '@/components/shared/ErrorMessage';
+import GlobalCategoryNav from '@/components/sections/GlobalCategoryNav';
 
 export default function ProductsPageClient({ initialData }) {
   const searchParams = useSearchParams();
@@ -113,6 +114,9 @@ export default function ProductsPageClient({ initialData }) {
           <SearchBar onSearch={handleSearch} initialValue={filters.search} />
         </div>
       </div>
+
+      {/* Category Navigation */}
+      <GlobalCategoryNav language="he" className="border-b border-neutral-100" />
 
       <div className="container mx-auto px-4 py-6 lg:py-8">
         <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">

@@ -6,6 +6,7 @@ import Loading from '@/components/shared/Loading';
 import ErrorMessage from '@/components/shared/ErrorMessage';
 import Link from 'next/link';
 import { ChevronLeft, Home } from 'lucide-react';
+import GlobalCategoryNav from '@/components/sections/GlobalCategoryNav';
 
 export default function ProductPageClient({ productId, initialData }) {
   // Pass initialData to React Query so it doesn't fetch unnecessarily
@@ -72,6 +73,9 @@ export default function ProductPageClient({ productId, initialData }) {
           </nav>
         </div>
       </div>
+
+      {/* Category Navigation */}
+      <GlobalCategoryNav language="he" className="border-b border-neutral-100" />
 
       {/* Product Details */}
       <div className="container mx-auto px-4 py-12 md:py-16">

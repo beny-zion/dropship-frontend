@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/products/ProductCard';
 import CategorySchema from '@/components/seo/CategorySchema';
-import { Button } from '@/components/ui/button';
+import GlobalCategoryNav from '@/components/sections/GlobalCategoryNav';
 import { ChevronLeft, Home } from 'lucide-react';
 
 // ============================================
@@ -142,6 +142,9 @@ export default async function CategoryPage({ params, searchParams }) {
           </nav>
         </div>
       </div>
+
+      {/* Category Navigation */}
+      <GlobalCategoryNav language="he" className="border-b border-neutral-100" />
 
       {/* Category Header - Elegant & Minimal */}
       <div

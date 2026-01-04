@@ -71,26 +71,23 @@ export default function ProductCarousel({ section, language = 'he' }) {
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [currentIndex, products.length, productCarousel.layout]);
+  }, [products.length, productCarousel.layout]);
 
-  const scrollToNext = () => {
-    const itemsPerView = getItemsPerView();
-    if (currentIndex + itemsPerView < products.length) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      setCurrentIndex(0);
-    }
-  };
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') {
+        scrollToNext();
+      } else if (e.key === 'ArrowLeft') {
+        scrollToPrev();
+      }
+    };
 
-  const scrollToPrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-    } else {
-      const itemsPerView = getItemsPerView();
-      setCurrentIndex(Math.max(0, products.length - itemsPerView));
-    }
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [products.length]);
 
+  // Helper function to calculate items per view
   const getItemsPerView = () => {
     if (typeof window === 'undefined') return 4;
     const width = window.innerWidth;
@@ -99,6 +96,42 @@ export default function ProductCarousel({ section, language = 'he' }) {
     if (width < 768) return layout.mobile || 1;
     if (width < 1024) return layout.tablet || 2;
     return layout.desktop || 4;
+  };
+
+  // Track scroll position for indicators
+  useEffect(() => {
+    const container = carouselRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollLeft = container.scrollLeft;
+      const currentItemsPerView = getItemsPerView();
+      const itemWidth = container.offsetWidth / currentItemsPerView;
+      const newIndex = Math.round(scrollLeft / itemWidth);
+
+      if (newIndex !== currentIndex) {
+        setCurrentIndex(newIndex);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [currentIndex, productCarousel.layout]);
+
+  const scrollToNext = () => {
+    const container = carouselRef.current;
+    if (!container) return;
+
+    const scrollAmount = container.offsetWidth;
+    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  };
+
+  const scrollToPrev = () => {
+    const container = carouselRef.current;
+    if (!container) return;
+
+    const scrollAmount = container.offsetWidth;
+    container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
   };
 
   if (loading) {
@@ -137,68 +170,54 @@ export default function ProductCarousel({ section, language = 'he' }) {
         </h2>
       )}
 
-      <div className="relative">
-        {/* Navigation Buttons */}
+      <div className="relative group">
+        {/* Navigation Buttons - שיפור העיצוב */}
         {layout.navigation && products.length > itemsPerView && (
           <>
             <button
               onClick={scrollToPrev}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-100 transition-all"
-              aria-label="Previous"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-xl rounded-full p-3 md:p-4 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+              aria-label="מוצרים קודמים"
             >
-              <ChevronRight className="h-6 w-6" />
+              <ChevronRight className="h-6 w-6 md:h-7 md:w-7 text-black" />
             </button>
             <button
               onClick={scrollToNext}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-100 transition-all"
-              aria-label="Next"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-xl rounded-full p-3 md:p-4 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+              aria-label="מוצרים הבאים"
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronLeft className="h-6 w-6 md:h-7 md:w-7 text-black" />
             </button>
           </>
         )}
 
-        {/* Products Container */}
+        {/* Products Container עם scroll אופקי טבעי */}
         <div
           ref={carouselRef}
-          className="overflow-hidden"
-          style={{ padding: '0 40px' }}
+          className="overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth flex gap-4"
+          style={{
+            padding: '0 40px',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
         >
-          <div
-            className="flex gap-4 transition-transform duration-300 ease-in-out"
-            style={{
-              transform: `translateX(${language === 'he' ? '' : '-'}${currentIndex * (100 / itemsPerView)}%)`
-            }}
-          >
-            {products.map((product) => (
-              <div
-                key={product._id}
-                className="flex-shrink-0"
-                style={{ width: `calc(${100 / itemsPerView}% - ${layout.spaceBetween || 20}px)` }}
-              >
-                <MinimalProductCard product={product} language={language} />
-              </div>
-            ))}
-          </div>
+          {products.map((product) => (
+            <div
+              key={product._id}
+              className="flex-shrink-0 snap-center"
+              style={{ width: `calc(${100 / itemsPerView}% - 16px)` }}
+            >
+              <MinimalProductCard product={product} language={language} />
+            </div>
+          ))}
         </div>
 
-        {/* Pagination Dots */}
-        {layout.pagination && products.length > itemsPerView && (
-          <div className="flex justify-center gap-2 mt-6">
-            {Array.from({ length: Math.ceil(products.length / itemsPerView) }).map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index * itemsPerView)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  Math.floor(currentIndex / itemsPerView) === index
-                    ? 'bg-primary w-6'
-                    : 'bg-gray-300 hover:bg-gray-400'
-                }`}
-                aria-label={`Go to page ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
+        <style jsx>{`
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
       </div>
 
       {/* View All Link */}

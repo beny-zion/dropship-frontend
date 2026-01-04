@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
@@ -22,7 +22,9 @@ import {
   CheckCircle,
   Info,
   Globe,
-  Tag
+  Tag,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -46,14 +48,34 @@ export default function ProductDetails({ product }) {
   };
 
   const imageData = getImageData();
-  const galleryImages = [imageData.main, ...imageData.gallery].filter(img => img && img !== '/placeholder.png');
+
+  // שמור את התמונות ב-useMemo כדי למנוע re-calculation
+  const galleryImages = useMemo(() => {
+    // תמונות ראשיות של המוצר
+    const baseImages = Array.isArray(product.images)
+      ? product.images.map(img => img.url)
+      : [imageData.main, ...imageData.gallery];
+
+    // הוספת תמונות מכל הווריאנטים (למנוע כפילויות)
+    const variantImages = product.variants?.flatMap(v => v.images?.map(img => img.url) || []) || [];
+
+    const allImages = [...baseImages, ...variantImages].filter(url => url && url !== '/placeholder.png');
+
+    // הסרת כפילויות (אם תמונת ווריאנט היא גם תמונה ראשית)
+    return Array.from(new Set(allImages)).length > 0 ? Array.from(new Set(allImages)) : [imageData.main];
+  }, [product.images, product.variants, imageData.main, imageData.gallery]);
 
   const [selectedImage, setSelectedImage] = useState(imageData.main);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [trackingClick, setTrackingClick] = useState(false);
+
+  // Image carousel ref for scrolling
+  const imageCarouselRef = useRef(null);
+  const isScrollingProgrammatically = useRef(false);
 
   // Variant selection
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -74,70 +96,6 @@ export default function ProductDetails({ product }) {
     : hasVariants
     ? [...new Set(product.variants.filter(v => v.stock?.available).map(v => v.size).filter(Boolean))]
     : [];
-
-  // Update selected variant when color or size changes
-  const updateSelectedVariant = (color, size) => {
-    if (!hasVariants) return;
-
-    // ⭐ תיקון: חיפוש מדויק שתומך בערכי null
-    // השוואה מדויקת: אם שני הצדדים null/undefined - זה התאמה
-    const variant = product.variants.find(v => {
-      const colorMatch = (v.color || null) === (color || null);
-      const sizeMatch = (v.size || null) === (size || null);
-      return colorMatch && sizeMatch && v.stock?.available;
-    });
-
-    if (variant) {
-      setSelectedVariant(variant);
-      // Update image if variant has images
-      if (variant.images && variant.images.length > 0) {
-        const primaryImg = variant.images.find(img => img.isPrimary) || variant.images[0];
-        setSelectedImage(primaryImg.url);
-      }
-    } else {
-      // אם לא נמצא ווריאנט, נקה את הבחירה
-      setSelectedVariant(null);
-    }
-  };
-
-  // Handle color selection - עדכון מיידי של התמונה הראשית בלבד
-  const handleColorSelect = (color) => {
-    setSelectedColor(color);
-
-    // מצא ווריאנט עם הצבע הנבחר ועדכן רק את התמונה הראשית
-    const variantWithColor = product.variants?.find(v => v.color === color);
-    if (variantWithColor?.images && variantWithColor.images.length > 0) {
-      const primaryImg = variantWithColor.images.find(img => img.isPrimary) || variantWithColor.images[0];
-      setSelectedImage(primaryImg.url);
-    }
-
-    // ⭐ תיקון: אם אין מידות זמינות, עדכן ווריאנט מיד (מוצרים עם צבעים בלבד)
-    if (availableSizes.length === 0) {
-      updateSelectedVariant(color, null);
-    } else if (selectedSize) {
-      updateSelectedVariant(color, selectedSize);
-    } else if (availableSizes.length === 1) {
-      // Auto-select if only one size available
-      setSelectedSize(availableSizes[0]);
-      updateSelectedVariant(color, availableSizes[0]);
-    }
-  };
-
-  // Handle size selection
-  const handleSizeSelect = (size) => {
-    setSelectedSize(size);
-
-    // ⭐ תיקון: אם אין צבעים זמינים, עדכן ווריאנט מיד (מוצרים עם מידות בלבד)
-    if (availableColors.length === 0) {
-      updateSelectedVariant(null, size);
-    } else if (selectedColor) {
-      updateSelectedVariant(selectedColor, size);
-    } else if (availableColors.length === 1) {
-      // Auto-select if only one color available
-      setSelectedColor(availableColors[0]);
-      updateSelectedVariant(availableColors[0], size);
-    }
-  };
 
   // Calculate current price (base + variant additional cost)
   const getCurrentPrice = () => {
@@ -225,6 +183,177 @@ export default function ProductDetails({ product }) {
     setMousePosition({ x, y });
   };
 
+  // Image navigation handlers - with RTL support
+  const scrollToImage = useCallback((index) => {
+    // Prevent any interference from scroll event handler
+    isScrollingProgrammatically.current = true;
+
+    // Update state
+    setSelectedImageIndex(index);
+    setSelectedImage(galleryImages[index]);
+
+    // Perform scroll with RTL support
+    if (imageCarouselRef.current) {
+      const container = imageCarouselRef.current;
+      const imageWidth = container.offsetWidth;
+
+      // In RTL browsers, scrollLeft goes negative as you scroll right
+      // So we need to negate the value: index 0 = 0, index 1 = -imageWidth, index 2 = -2*imageWidth
+      const targetScroll = -1 * imageWidth * index;
+
+      // Use scrollLeft directly for instant positioning
+      container.scrollLeft = targetScroll;
+    }
+
+    // Reset flag after a short delay
+    setTimeout(() => {
+      isScrollingProgrammatically.current = false;
+    }, 300);
+  }, [galleryImages]);
+
+  // פונקציית עזר לסנכרון הגלריה עם תמונה ספציפית
+  const syncCarouselToImage = useCallback((imageUrl) => {
+    if (!imageUrl) return;
+
+    const index = galleryImages.findIndex(url => url === imageUrl);
+    if (index !== -1) {
+      // השתמש בפונקציה הקיימת שכבר מטפלת בגלילה ובעדכון ה-State
+      scrollToImage(index);
+    } else {
+      // מקרה קצה: התמונה לא בגלריה, עדיין נציג אותה
+      setSelectedImage(imageUrl);
+    }
+  }, [galleryImages, scrollToImage]);
+
+  // Update selected variant when color or size changes
+  const updateSelectedVariant = useCallback((color, size) => {
+    if (!hasVariants) return;
+
+    // ⭐ תיקון: חיפוש מדויק שתומך בערכי null
+    // השוואה מדויקת: אם שני הצדדים null/undefined - זה התאמה
+    const variant = product.variants.find(v => {
+      const colorMatch = (v.color || null) === (color || null);
+      const sizeMatch = (v.size || null) === (size || null);
+      return colorMatch && sizeMatch && v.stock?.available;
+    });
+
+    if (variant) {
+      setSelectedVariant(variant);
+      // Update image if variant has images - סנכרון הקרוסלה
+      if (variant.images && variant.images.length > 0) {
+        const primaryImg = variant.images.find(img => img.isPrimary) || variant.images[0];
+        syncCarouselToImage(primaryImg.url);
+      }
+    } else {
+      // אם לא נמצא ווריאנט, נקה את הבחירה
+      setSelectedVariant(null);
+    }
+  }, [hasVariants, product.variants, syncCarouselToImage]);
+
+  // Handle color selection - עדכון מיידי של התמונה הראשית בלבד
+  const handleColorSelect = (color) => {
+    setSelectedColor(color);
+
+    // מצא ווריאנט עם הצבע הנבחר ועדכן רק את התמונה הראשית - עם סנכרון הקרוסלה
+    const variantWithColor = product.variants?.find(v => v.color === color);
+    if (variantWithColor?.images && variantWithColor.images.length > 0) {
+      const primaryImg = variantWithColor.images.find(img => img.isPrimary) || variantWithColor.images[0];
+      // סנכרון הקרוסלה לתמונה של הצבע הנבחר
+      syncCarouselToImage(primaryImg.url);
+    }
+
+    // ⭐ תיקון: אם אין מידות זמינות, עדכן ווריאנט מיד (מוצרים עם צבעים בלבד)
+    if (availableSizes.length === 0) {
+      updateSelectedVariant(color, null);
+    } else if (selectedSize) {
+      updateSelectedVariant(color, selectedSize);
+    } else if (availableSizes.length === 1) {
+      // Auto-select if only one size available
+      setSelectedSize(availableSizes[0]);
+      updateSelectedVariant(color, availableSizes[0]);
+    }
+  };
+
+  // Handle size selection
+  const handleSizeSelect = (size) => {
+    setSelectedSize(size);
+
+    // ⭐ תיקון: אם אין צבעים זמינים, עדכן ווריאנט מיד (מוצרים עם מידות בלבד)
+    if (availableColors.length === 0) {
+      updateSelectedVariant(null, size);
+    } else if (selectedColor) {
+      updateSelectedVariant(selectedColor, size);
+    } else if (availableColors.length === 1) {
+      // Auto-select if only one color available
+      setSelectedColor(availableColors[0]);
+      updateSelectedVariant(availableColors[0], size);
+    }
+  };
+
+  const goToNextImage = () => {
+    if (galleryImages.length <= 1) return;
+    const nextIndex = (selectedImageIndex + 1) % galleryImages.length;
+    scrollToImage(nextIndex);
+  };
+
+  const goToPrevImage = () => {
+    if (galleryImages.length <= 1) return;
+    const prevIndex = selectedImageIndex === 0 ? galleryImages.length - 1 : selectedImageIndex - 1;
+    scrollToImage(prevIndex);
+  };
+
+  const selectImageByIndex = (index) => {
+    scrollToImage(index);
+  };
+
+  // Track scroll position to update selected image
+  useEffect(() => {
+    const container = imageCarouselRef.current;
+    if (!container) return;
+
+    let scrollTimeout;
+    const handleScroll = () => {
+      // Don't update state if we're scrolling programmatically
+      if (isScrollingProgrammatically.current) return;
+
+      // Debounce scroll updates to prevent race conditions
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const scrollLeft = container.scrollLeft;
+        const imageWidth = container.offsetWidth;
+
+        // Handle RTL: scrollLeft can be negative
+        // Use absolute value and calculate index
+        const newIndex = Math.round(Math.abs(scrollLeft) / imageWidth);
+
+        if (newIndex >= 0 && newIndex < galleryImages.length) {
+          setSelectedImageIndex(newIndex);
+          setSelectedImage(galleryImages[newIndex]);
+        }
+      }, 50);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [galleryImages]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') {
+        goToNextImage();
+      } else if (e.key === 'ArrowLeft') {
+        goToPrevImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImageIndex, galleryImages]);
+
   // Quantity handlers
   const increaseQuantity = () => {
     if (quantity < 2) {
@@ -242,98 +371,160 @@ export default function ProductDetails({ product }) {
     <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
       {/* תמונות */}
       <div className="space-y-4">
-        {/* תמונה ראשית עם זום */}
-        <div
-          className="relative aspect-square bg-neutral-50 overflow-hidden cursor-zoom-in"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          onMouseMove={handleMouseMove}
-        >
-          {selectedImage && selectedImage !== '/placeholder.png' ? (
-            selectedImage.startsWith('data:') ? (
-              <img
-                src={selectedImage}
-                alt={product.name_he}
-                className={`w-full h-full object-contain p-4 md:p-8 transition-transform duration-200 ${
-                  isZoomed ? 'scale-150' : 'scale-100'
-                }`}
-                style={
-                  isZoomed
-                    ? {
-                        transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
-                      }
-                    : {}
-                }
-              />
-            ) : (
-              <div className="relative w-full h-full">
-                <Image
-                  src={selectedImage}
-                  alt={product.name_he}
-                  fill
-                  className={`object-contain p-4 md:p-8 transition-transform duration-200 ${
-                    isZoomed ? 'scale-150' : 'scale-100'
-                  }`}
-                  style={
-                    isZoomed
-                      ? {
-                          transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
-                        }
-                      : {}
-                  }
-                  priority
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
+        {/* גלריית תמונות עם גלילה אופקית */}
+        <div className="relative group">
+          {/* חיצי ניווט - מוצגים רק אם יש יותר מתמונה אחת */}
+          {galleryImages.length > 1 && (
+            <>
+              <button
+                onClick={goToPrevImage}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 md:p-3 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+                aria-label="תמונה קודמת"
+              >
+                <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-black" />
+              </button>
+              <button
+                onClick={goToNextImage}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 md:p-3 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+                aria-label="תמונה הבאה"
+              >
+                <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-black" />
+              </button>
+
+              {/* אינדיקטור תמונות */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
+                {galleryImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => selectImageByIndex(index)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      index === selectedImageIndex
+                        ? 'w-6 bg-white'
+                        : 'w-1.5 bg-white/50 hover:bg-white/75'
+                    }`}
+                    aria-label={`תמונה ${index + 1}`}
+                  />
+                ))}
               </div>
-            )
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 text-sm md:text-lg">
-              אין תמונה זמינה
-            </div>
+            </>
           )}
 
-          {/* Badges on Image - Minimal */}
-          <div className="absolute top-4 right-4 flex flex-col gap-2">
-            {hasDiscount && (
-              <div className="bg-black text-white px-3 py-1 text-xs font-light tracking-wider">
-                -{product.discount}%
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* תמונות ממוזערות - Minimal Gallery */}
-        {galleryImages.length > 0 && (
-          <div className="grid grid-cols-4 gap-2">
-            {galleryImages.slice(0, 4).map((image, index) => (
-              <button
+          {/* Carousel עם scroll אופקי */}
+          <div
+            ref={imageCarouselRef}
+            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}
+          >
+            {galleryImages.map((image, index) => (
+              <div
                 key={index}
-                onClick={() => setSelectedImage(image)}
-                className={`relative aspect-square bg-neutral-50 overflow-hidden transition-all hover:opacity-75 ${
-                  selectedImage === image
-                    ? 'ring-2 ring-black'
-                    : ''
-                }`}
+                className="flex-shrink-0 w-full snap-center"
               >
-                {image.startsWith('data:') ? (
-                  <img
-                    src={image}
-                    alt={`${product.name_he} ${index + 1}`}
-                    className="w-full h-full object-contain p-1.5 md:p-2"
-                  />
-                ) : (
-                  <Image
-                    src={image}
-                    alt={`${product.name_he} ${index + 1}`}
-                    fill
-                    className="object-contain p-1.5 md:p-2"
-                    sizes="(max-width: 768px) 25vw, 100px"
-                  />
-                )}
-              </button>
+                <div
+                  className="relative aspect-square bg-neutral-50 cursor-zoom-in"
+                  onMouseEnter={index === selectedImageIndex ? handleMouseEnter : undefined}
+                  onMouseLeave={index === selectedImageIndex ? handleMouseLeave : undefined}
+                  onMouseMove={index === selectedImageIndex ? handleMouseMove : undefined}
+                >
+                  {image && image !== '/placeholder.png' ? (
+                    image.startsWith('data:') ? (
+                      <img
+                        src={image}
+                        alt={`${product.name_he} ${index + 1}`}
+                        className={`w-full h-full object-contain p-4 md:p-8 transition-transform duration-200 ${
+                          index === selectedImageIndex && isZoomed ? 'scale-150' : 'scale-100'
+                        }`}
+                        style={
+                          index === selectedImageIndex && isZoomed
+                            ? {
+                                transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                              }
+                            : {}
+                        }
+                      />
+                    ) : (
+                      <div className="relative w-full h-full">
+                        <Image
+                          src={image}
+                          alt={`${product.name_he} ${index + 1}`}
+                          fill
+                          className={`object-contain p-4 md:p-8 transition-transform duration-200 ${
+                            index === selectedImageIndex && isZoomed ? 'scale-150' : 'scale-100'
+                          }`}
+                          style={
+                            index === selectedImageIndex && isZoomed
+                              ? {
+                                  transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                                }
+                              : {}
+                          }
+                          priority={index === 0}
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                        />
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm md:text-lg">
+                      אין תמונה זמינה
+                    </div>
+                  )}
+
+                  {/* Badges on first image only */}
+                  {index === 0 && (
+                    <div className="absolute top-4 right-4 flex flex-col gap-2">
+                      {hasDiscount && (
+                        <div className="bg-black text-white px-3 py-1 text-xs font-light tracking-wider">
+                          -{product.discount}%
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
-        )}
+
+          <style jsx>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+        </div>
+
+        {/* תמונות ממוזערות - Minimal Gallery - תמיד מוצג */}
+        <div className="grid grid-cols-4 gap-2">
+          {galleryImages.map((image, index) => (
+            <button
+              key={index}
+              onClick={() => selectImageByIndex(index)}
+              className={`relative aspect-square bg-neutral-50 overflow-hidden transition-all hover:opacity-75 ${
+                selectedImageIndex === index
+                  ? 'ring-2 ring-black'
+                  : 'ring-1 ring-neutral-200'
+              }`}
+            >
+              {image.startsWith('data:') ? (
+                <img
+                  src={image}
+                  alt={`${product.name_he} ${index + 1}`}
+                  className="w-full h-full object-contain p-1.5 md:p-2"
+                />
+              ) : (
+                <Image
+                  src={image}
+                  alt={`${product.name_he} ${index + 1}`}
+                  fill
+                  className="object-contain p-1.5 md:p-2"
+                  sizes="(max-width: 768px) 25vw, 100px"
+                />
+              )}
+            </button>
+          ))}
+        </div>
 
         {/* Variant Selectors - Minimal Design */}
         {hasVariants && (
