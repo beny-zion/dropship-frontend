@@ -161,45 +161,99 @@ export default function CategoryGrid({ section, language = 'he' }) {
 }
 
 // Improved Card Style (GUESS inspired - 2 columns grid)
+// function CategoryCard({ category, language }) {
+//   const name = category.name?.[language] || category.name?.he || category.name || '';
+//   const imageUrl = category.mainImage?.url || category.image?.url || '/placeholder-category.jpg';
+
+//   return (
+//     <Link href={`/categories/${category.slug || category._id}`}>
+//       <div className="relative aspect-[4/5] overflow-hidden group rounded-lg">
+//         {/* Background Image - Crystal Clear, No Overlay */}
+//         <img
+//           src={imageUrl}
+//           alt={name}
+//           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+//           style={{ imageRendering: 'crisp-edges' }}
+//         />
+
+//         {/* Content - Bottom Aligned with localized shadow */}
+//         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+//           {/* Localized gradient ONLY behind text area (128px height) */}
+//           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent -z-10 pointer-events-none" />
+
+//           {/* Category Name */}
+//           <h3
+//             className="guess-heading-secondary text-white mb-2 relative"
+//             dir={language === 'he' ? 'rtl' : 'ltr'}
+//             style={{ textShadow: '2px 2px 12px rgba(0, 0, 0, 0.9)' }}
+//           >
+//             {name}
+//           </h3>
+
+//           {/* Product Count */}
+//           {category.productCount > 0 && (
+//             <p className="text-white/90 text-sm md:text-base font-medium uppercase tracking-wide relative">
+//               {category.productCount} {language === 'he' ? 'מוצרים' : 'Products'}
+//             </p>
+//           )}
+
+//           {/* Shop CTA - Appears on Hover */}
+//           <div className="mt-4 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-500 relative">
+//             <span className="guess-cta inline-block text-white border-b-2 border-white pb-1">
+//               {language === 'he' ? 'קנה עכשיו' : 'Shop Now'}
+//             </span>
+//           </div>
+//         </div>
+//       </div>
+//     </Link>
+//   );
+// }
 function CategoryCard({ category, language }) {
   const name = category.name?.[language] || category.name?.he || category.name || '';
   const imageUrl = category.mainImage?.url || category.image?.url || '/placeholder-category.jpg';
 
   return (
-    <Link href={`/categories/${category.slug || category._id}`}>
-      <div className="relative aspect-[4/5] overflow-hidden group rounded-lg">
+    <Link 
+      href={`/categories/${category.slug || category._id}`} 
+      // ה-!opacity-100 מבטל את ה-0.7 הגלובלי מה-CSS
+      className="group block hover:!opacity-100 transition-opacity"
+    >
+      <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-black">
         {/* Background Image */}
         <img
           src={imageUrl}
           alt={name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full object-cover transition-all duration-700 
+                     group-hover:scale-110 
+                     !opacity-100 
+                     group-hover:brightness-[0.85] 
+                     group-hover:contrast-[1.1]"
+          style={{ 
+            transform: 'translateZ(0)', // מונע טשטוש בזמן הגדלה
+            willChange: 'transform, filter'
+          }}
         />
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        {/* Shadow Overlay - שכבה כהה שמתחזקת ב-Hover כדי להבליט את הטקסט */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
 
-        {/* Content - Bottom Aligned */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-          {/* Category Name */}
+        {/* Content */}
+        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
           <h3
-            className="guess-heading-secondary text-white guess-text-overlay mb-2"
+            className="guess-heading-secondary text-white mb-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-500"
             dir={language === 'he' ? 'rtl' : 'ltr'}
+            style={{ textShadow: '0px 4px 20px rgba(0, 0, 0, 0.6)' }}
           >
             {name}
           </h3>
 
-          {/* Product Count */}
-          {category.productCount > 0 && (
-            <p className="text-white/90 text-sm md:text-base font-medium uppercase tracking-wide">
-              {category.productCount} {language === 'he' ? 'מוצרים' : 'Products'}
-            </p>
-          )}
-
-          {/* Shop CTA - Appears on Hover */}
-          <div className="mt-4 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-            <span className="guess-cta inline-block text-white border-b-2 border-white pb-1">
-              {language === 'he' ? 'קנה עכשיו' : 'Shop Now'}
-            </span>
+          {/* Shop CTA */}
+          <div className="overflow-hidden">
+            <div className="opacity-0 group-hover:opacity-100 translate-y-full group-hover:translate-y-0 transition-all duration-500">
+              <span className="guess-cta inline-block text-white border-b-2 border-white pb-1 text-sm font-bold uppercase tracking-widest">
+                {language === 'he' ? 'צפה בקולקציה' : 'View Collection'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

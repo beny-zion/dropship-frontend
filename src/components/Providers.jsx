@@ -1,6 +1,7 @@
 'use client';
 
 import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthPromptProvider } from '@/contexts/AuthPromptContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { CsrfProvider } from '@/contexts/CsrfContext'; // 🔒 CSRF Protection
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,10 +24,12 @@ export function Providers({ children }) {
     <QueryClientProvider client={queryClient}>
       <CsrfProvider>
         <AuthProvider>
-          <CartProvider>
-            {children}
-            <Toaster position="top-center" richColors />
-          </CartProvider>
+          <AuthPromptProvider>
+            <CartProvider>
+              {children}
+              <Toaster position="top-center" richColors />
+            </CartProvider>
+          </AuthPromptProvider>
         </AuthProvider>
       </CsrfProvider>
     </QueryClientProvider>

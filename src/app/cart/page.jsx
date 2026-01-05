@@ -371,14 +371,21 @@ export default function CartPage() {
 
             {/* Free Shipping Progress */}
             {freeShippingSettings?.enabled && freeShippingSettings?.threshold?.ils > 0 && cart.pricing.subtotal < freeShippingSettings.threshold.ils && (
-              <div className="bg-blue-50 border border-blue-200 text-blue-900 text-sm p-4 rounded-lg mb-6">
-                <p className="font-semibold mb-2">כמעט משלוח חינם!</p>
-                <p>
-                  הוסף עוד <span className="font-bold">₪{(freeShippingSettings.threshold.ils - cart.pricing.subtotal).toFixed(2)}</span> וקבל משלוח חינם
-                </p>
-                <div className="mt-2 bg-blue-200 rounded-full h-2">
+              <div className="border border-neutral-200 bg-neutral-50 p-4 mb-6">
+                <div className="flex items-center justify-between gap-3 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-neutral-600 flex-shrink-0" />
+                    <p className="text-xs font-light text-neutral-600 tracking-wide">
+                      עוד <span className="font-medium text-black">₪{(freeShippingSettings.threshold.ils - cart.pricing.subtotal).toFixed(0)}</span> למשלוח חינם
+                    </p>
+                  </div>
+                  <span className="text-xs font-light text-neutral-500 whitespace-nowrap">
+                    ₪{freeShippingSettings.threshold.ils}
+                  </span>
+                </div>
+                <div className="bg-neutral-200 h-1 overflow-hidden">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-black h-full transition-all duration-500 ease-out"
                     style={{ width: `${Math.min((cart.pricing.subtotal / freeShippingSettings.threshold.ils) * 100, 100)}%` }}
                   />
                 </div>
@@ -387,8 +394,11 @@ export default function CartPage() {
 
             {/* Free Shipping Achieved */}
             {freeShippingSettings?.enabled && freeShippingSettings?.threshold?.ils > 0 && cart.pricing.subtotal >= freeShippingSettings.threshold.ils && (
-              <div className="bg-green-50 border border-green-200 text-green-900 text-sm p-4 rounded-lg mb-6 text-center">
-                <p className="font-semibold">🎉 זכית במשלוח חינם!</p>
+              <div className="border border-black bg-black text-white p-5 mb-6">
+                <div className="flex items-center justify-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  <p className="font-normal text-sm tracking-widest uppercase">משלוח חינם</p>
+                </div>
               </div>
             )}
 

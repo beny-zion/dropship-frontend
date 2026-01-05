@@ -62,6 +62,7 @@ apiClient.interceptors.response.use(
         const currentPath = window.location.pathname;
         const isAuthPage = currentPath === '/login' || currentPath === '/register';
         const isAdminPage = currentPath.startsWith('/admin');
+        const isHomePage = currentPath === '/';
 
         // For admin pages - provide detailed error message
         if (isAdminPage) {
@@ -71,8 +72,9 @@ apiClient.interceptors.response.use(
           setTimeout(() => {
             window.location.href = '/login';
           }, 2000);
-        } else if (!isAuthPage) {
-          // For regular users - silent redirect
+        } else if (!isAuthPage && !isHomePage) {
+          // For regular users - silent redirect (but NOT on home page)
+          // Home page should show auth modal instead
           window.location.href = '/login';
         }
       }

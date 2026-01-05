@@ -158,15 +158,12 @@ export function PaymentIframe({
         <div className="flex items-start gap-3">
           <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-blue-900 mb-1">💳 איך זה עובד?</p>
-            <p className="text-blue-800 font-light leading-relaxed text-sm">
-              <strong>שלב 1:</strong> נתפוס מסגרת של <strong className="text-blue-900">₪{amount?.toFixed(0)}</strong> בכרטיס שלך<br/>
-              <strong>שלב 2:</strong> נזמין את המוצרים מהספק (1-3 ימים)<br/>
-              <strong>שלב 3:</strong> רק אז נבצע את החיוב הסופי
-            </p>
-            <p className="text-xs text-blue-700 mt-2 font-medium">
-              ✅ לא נגבה ממך כסף עד שהמוצרים יוזמנו בפועל
-            </p>
+            <p className="font-semibold text-blue-900 mb-2">💳 איך זה עובד?</p>
+            <div className="text-blue-800 font-light leading-relaxed text-sm space-y-1">
+              <p>✓ תופסים מסגרת בכרטיס שלך</p>
+              <p>✓ מוודאים זמינות מוצרים</p>
+              <p>✓ גובים את הסכום המדויק</p>
+            </div>
           </div>
         </div>
       </div>

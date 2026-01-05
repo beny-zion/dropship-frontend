@@ -13,7 +13,7 @@ export default function AboutPage() {
             אודות TORINO
           </h1>
           <p className="text-xl md:text-2xl font-light leading-relaxed text-neutral-600 max-w-3xl">
-            ברוכים הבאים ל-TORINO - חנות האינטרנט המובילה למוצרים איכותיים ביבוא אישי בישראל.
+            ברוכים הבאים ל-TORINO - חנות האינטרנט המובילה למותגים יחודיים שיובאו אישית לישראל.
             אנו מאמינים שקנייה אונליין צריכה להיות פשוטה, נוחה ואמינה.
           </p>
         </div>
@@ -28,16 +28,16 @@ export default function AboutPage() {
                 מי אנחנו
               </h2>
               <h3 className="text-3xl md:text-4xl font-light leading-tight mb-8">
-                חברה ישראלית <br />למסחר אלקטרוני<br />ויבוא אישי
+                חברה ישראלית <br />למסחר אלקטרוני<br />ומכירת מותגים יחודיים
               </h3>
             </div>
             <div className="space-y-6">
               <p className="text-lg font-light leading-relaxed text-neutral-700">
-                TORINO היא חברה ישראלית המתמחה במסחר אלקטרוני ויבוא אישי. אנו מציעים מגוון רחב של מוצרים
+                TORINO היא חברה ישראלית המתמחה במסחר אלקטרוני ומכירת מותגים יחודיים שיובאו אישית. אנו מציעים מגוון רחב של מותגים
                 איכותיים במחירים תחרותיים, תוך שמירה על שירות אישי ומקצועי.
               </p>
               <p className="text-lg font-light leading-relaxed text-neutral-700">
-                הקמנו את החברה מתוך רצון לאפשר לכל אחד ואחת בישראל לקנות מוצרים איכותיים באופן מקוון,
+                הקמנו את החברה מתוך רצון לאפשר לכל אחד ואחת בישראל לקנות מותגים איכותיים באופן מקוון,
                 בצורה נוחה, מהירה ובטוחה - מבלי לצאת מהבית.
               </p>
             </div>
@@ -53,10 +53,10 @@ export default function AboutPage() {
               החזון שלנו
             </h2>
             <p className="text-3xl md:text-4xl font-light leading-tight">
-              להיות החנות האונליין המועדפת בישראל למוצרים איכותיים ביבוא אישי
+              להיות החנות האונליין המועדפת בישראל למותגים איכותיים ויוקרתיים
             </p>
             <p className="text-lg font-light leading-relaxed text-neutral-400 mt-8">
-              אנו שואפים ליצור חוויית קנייה מושלמת שמשלבת מגוון רחב, מחירים הוגנים, משלוח מהיר ושירות לקוחות מעולה.
+              אנו שואפים ליצור חוויית קנייה מושלמת שמשלבת מגוון רחב של מותגים מובילים, מחירים הוגנים, משלוח אמין ושירות לקוחות מעולה.
               המטרה שלנו היא שכל לקוח ירגיש מרוצה ובטוח ברכישה שלו.
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function AboutPage() {
             <div className="border-t border-neutral-200 pt-8">
               <h3 className="text-2xl font-light mb-4">איכות מעל הכל</h3>
               <p className="text-neutral-600 font-light leading-relaxed">
-                אנו בוחרים בקפידה כל מוצר שאנו מציעים, ומוודאים שהוא עומד בסטנדרטים הגבוהים ביותר של איכות ואמינות.
+                אנו בוחרים בקפידה כל מותג שאנו מציעים, ומוודאים שהוא עומד בסטנדרטים הגבוהים ביותר של איכות ואמינות.
               </p>
             </div>
 
@@ -112,9 +112,9 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-3 gap-8">
             <div>
               <div className="h-px bg-black w-12 mb-6"></div>
-              <h3 className="text-xl font-light mb-3">מגוון רחב של מוצרים</h3>
+              <h3 className="text-xl font-light mb-3">מגוון רחב של מותגים</h3>
               <p className="text-sm font-light text-neutral-600 leading-relaxed">
-                מאלקטרוניקה ועד לבית וגן, מאביזרי אופנה ועד למוצרי ספורט - אנו מציעים מגוון עצום של מוצרים איכותיים.
+                ממותגי יוקרה עולמיים ועד למותגים ייחודיים ומבוקשים - אנו מציעים מגוון עצום של מותגים איכותיים.
               </p>
             </div>
 
@@ -128,9 +128,9 @@ export default function AboutPage() {
 
             <div>
               <div className="h-px bg-black w-12 mb-6"></div>
-              <h3 className="text-xl font-light mb-3">משלוח מהיר</h3>
+              <h3 className="text-xl font-light mb-3">משלוח אמין</h3>
               <p className="text-sm font-light text-neutral-600 leading-relaxed">
-                משלוחים תוך 3-5 ימי עסקים לכל רחבי ישראל, עם אפשרות למשלוח מהיר תוך 1-2 ימים.
+                משלוחים תוך 21-28 ימים לכל רחבי ישראל, עם מעקב מלא מרגע ההזמנה ועד למסירה.
               </p>
             </div>
 
@@ -154,7 +154,7 @@ export default function AboutPage() {
               <div className="h-px bg-black w-12 mb-6"></div>
               <h3 className="text-xl font-light mb-3">תמיכה מקצועית</h3>
               <p className="text-sm font-light text-neutral-600 leading-relaxed">
-                צוות התמיכה שלנו זמין לעזור לכם בכל שאלה או בעיה, בטלפון, דוא״ל או צ׳אט.
+                צוות התמיכה שלנו זמין לעזור לכם בכל שאלה או בעיה בדוא״ל.
               </p>
             </div>
           </div>
@@ -179,21 +179,21 @@ export default function AboutPage() {
             <div className="flex items-start gap-4">
               <div className="text-xl">✓</div>
               <div>
-                <span className="font-light"><strong className="font-normal">אמינות:</strong> אלפי לקוחות מרוצים שחוזרים לקנות שוב ושוב</span>
+                <span className="font-light"><strong className="font-normal">אמינות:</strong> לקוחות מרוצים שחוזרים לקנות שוב ושוב</span>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
               <div className="text-xl">✓</div>
               <div>
-                <span className="font-light"><strong className="font-normal">חדשנות:</strong> אנו מעדכנים כל הזמן את המלאי עם המוצרים החדשים והטרנדיים ביותר</span>
+                <span className="font-light"><strong className="font-normal">חדשנות:</strong> אנו מעדכנים כל הזמן את המלאי עם המותגים החדשים והטרנדיים ביותר</span>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
               <div className="text-xl">✓</div>
               <div>
-                <span className="font-light"><strong className="font-normal">זמינות:</strong> האתר פועל 24/7, ואנחנו זמינים לתמיכה בימים ובשעות העבודה</span>
+                <span className="font-light"><strong className="font-normal">זמינות:</strong> אנחנו זמינים לתמיכה בימים ובשעות העבודה</span>
               </div>
             </div>
 
@@ -223,9 +223,9 @@ export default function AboutPage() {
             </div>
 
             <div>
-              <h3 className="text-xl font-light mb-3">תגובה תוך 24 שעות</h3>
+              <h3 className="text-xl font-light mb-3">תגובה תוך 48 שעות</h3>
               <p className="text-sm font-light text-neutral-600 leading-relaxed">
-                כל פנייה תענה תוך יום עסקים אחד
+                כל פנייה תענה תוך שני ימי עסקים
               </p>
             </div>
 

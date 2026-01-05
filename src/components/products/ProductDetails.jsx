@@ -51,18 +51,37 @@ export default function ProductDetails({ product }) {
 
   // שמור את התמונות ב-useMemo כדי למנוע re-calculation
   const galleryImages = useMemo(() => {
-    // תמונות ראשיות של המוצר
-    const baseImages = Array.isArray(product.images)
-      ? product.images.map(img => img.url)
-      : [imageData.main, ...imageData.gallery];
+    // תמונות ראשיות של המוצר עם מידע נוסף
+    const baseImagesData = Array.isArray(product.images)
+      ? product.images
+      : [{ url: imageData.main, alt: 'main' }, ...imageData.gallery.map((url, i) => ({ url, alt: `gallery-${i}` }))];
 
-    // הוספת תמונות מכל הווריאנטים (למנוע כפילויות)
-    const variantImages = product.variants?.flatMap(v => v.images?.map(img => img.url) || []) || [];
+    // הוספת תמונות מכל הווריאנטים
+    const variantImagesData = product.variants?.flatMap(v => v.images || []) || [];
 
-    const allImages = [...baseImages, ...variantImages].filter(url => url && url !== '/placeholder.png');
+    // איחוד כל התמונות
+    const allImagesData = [...baseImagesData, ...variantImagesData].filter(img => img.url && img.url !== '/placeholder.png');
 
-    // הסרת כפילויות (אם תמונת ווריאנט היא גם תמונה ראשית)
-    return Array.from(new Set(allImages)).length > 0 ? Array.from(new Set(allImages)) : [imageData.main];
+    // הסרת כפילויות - קודם לפי alt (שם תמונה), אחר כך לפי URL
+    const uniqueImages = [];
+    const seenAlts = new Set();
+    const seenUrls = new Set();
+
+    for (const img of allImagesData) {
+      const identifier = img.alt || img.url;
+
+      // אם יש alt ולא ראינו אותו, או אם אין alt ולא ראינו את ה-URL
+      if (img.alt && !seenAlts.has(img.alt)) {
+        seenAlts.add(img.alt);
+        seenUrls.add(img.url);
+        uniqueImages.push(img.url);
+      } else if (!img.alt && !seenUrls.has(img.url)) {
+        seenUrls.add(img.url);
+        uniqueImages.push(img.url);
+      }
+    }
+
+    return uniqueImages.length > 0 ? uniqueImages : [imageData.main];
   }, [product.images, product.variants, imageData.main, imageData.gallery]);
 
   const [selectedImage, setSelectedImage] = useState(imageData.main);
@@ -86,16 +105,28 @@ export default function ProductDetails({ product }) {
   const freeShipping = product.shipping?.freeShipping || false;
   const hasVariants = product.variants && product.variants.length > 0;
 
-  // Get available colors and sizes
-  const availableColors = hasVariants
-    ? [...new Set(product.variants.filter(v => v.stock?.available).map(v => v.color).filter(Boolean))]
+  // Get ALL colors and sizes (including unavailable ones for scarcity marketing)
+  const allColors = hasVariants
+    ? [...new Set(product.variants.map(v => v.color).filter(Boolean))]
     : [];
 
-  const availableSizes = hasVariants && selectedColor
-    ? [...new Set(product.variants.filter(v => v.color === selectedColor && v.stock?.available).map(v => v.size).filter(Boolean))]
+  const allSizes = hasVariants && selectedColor
+    ? [...new Set(product.variants.filter(v => v.color === selectedColor).map(v => v.size).filter(Boolean))]
     : hasVariants
-    ? [...new Set(product.variants.filter(v => v.stock?.available).map(v => v.size).filter(Boolean))]
+    ? [...new Set(product.variants.map(v => v.size).filter(Boolean))]
     : [];
+
+  // Helper functions to check availability
+  const isColorAvailable = (color) => {
+    return product.variants.some(v => v.color === color && v.stock?.available);
+  };
+
+  const isSizeAvailable = (size) => {
+    if (selectedColor) {
+      return product.variants.some(v => v.color === selectedColor && v.size === size && v.stock?.available);
+    }
+    return product.variants.some(v => v.size === size && v.stock?.available);
+  };
 
   // Calculate current price (base + variant additional cost)
   const getCurrentPrice = () => {
@@ -110,20 +141,20 @@ export default function ProductDetails({ product }) {
   const handleAddToCart = async () => {
     // Validate variant selection if product has variants
     if (hasVariants) {
-      // בדוק שבחרו צבע אם יש צבעים זמינים
-      if (!selectedColor && availableColors.length > 0) {
+      // בדוק שבחרו צבע אם יש צבעים
+      if (!selectedColor && allColors.length > 0) {
         toast.error('אנא בחר צבע');
         return;
       }
-      // בדוק שבחרו מידה אם יש מידות זמינות
-      if (!selectedSize && availableSizes.length > 0) {
+      // בדוק שבחרו מידה אם יש מידות
+      if (!selectedSize && allSizes.length > 0) {
         toast.error('אנא בחר מידה');
         return;
       }
       // ⭐ תיקון: אם יש ווריאנטים אבל לא נבחר אף אחד - נסה למצוא אוטומטית
       if (!selectedVariant) {
         // אם אין צבעים ומידות כלל, זה אומר שהמוצר לא זמין
-        if (availableColors.length === 0 && availableSizes.length === 0) {
+        if (allColors.length === 0 && allSizes.length === 0) {
           toast.error('מוצר זה לא זמין כרגע');
           return;
         }
@@ -262,15 +293,15 @@ export default function ProductDetails({ product }) {
       syncCarouselToImage(primaryImg.url);
     }
 
-    // ⭐ תיקון: אם אין מידות זמינות, עדכן ווריאנט מיד (מוצרים עם צבעים בלבד)
-    if (availableSizes.length === 0) {
+    // ⭐ תיקון: אם אין מידות, עדכן ווריאנט מיד (מוצרים עם צבעים בלבד)
+    if (allSizes.length === 0) {
       updateSelectedVariant(color, null);
     } else if (selectedSize) {
       updateSelectedVariant(color, selectedSize);
-    } else if (availableSizes.length === 1) {
-      // Auto-select if only one size available
-      setSelectedSize(availableSizes[0]);
-      updateSelectedVariant(color, availableSizes[0]);
+    } else if (allSizes.length === 1 && isSizeAvailable(allSizes[0])) {
+      // Auto-select if only one size available and it's in stock
+      setSelectedSize(allSizes[0]);
+      updateSelectedVariant(color, allSizes[0]);
     }
   };
 
@@ -278,15 +309,15 @@ export default function ProductDetails({ product }) {
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
 
-    // ⭐ תיקון: אם אין צבעים זמינים, עדכן ווריאנט מיד (מוצרים עם מידות בלבד)
-    if (availableColors.length === 0) {
+    // ⭐ תיקון: אם אין צבעים, עדכן ווריאנט מיד (מוצרים עם מידות בלבד)
+    if (allColors.length === 0) {
       updateSelectedVariant(null, size);
     } else if (selectedColor) {
       updateSelectedVariant(selectedColor, size);
-    } else if (availableColors.length === 1) {
-      // Auto-select if only one color available
-      setSelectedColor(availableColors[0]);
-      updateSelectedVariant(availableColors[0], size);
+    } else if (allColors.length === 1 && isColorAvailable(allColors[0])) {
+      // Auto-select if only one color available and it's in stock
+      setSelectedColor(allColors[0]);
+      updateSelectedVariant(allColors[0], size);
     }
   };
 
@@ -530,49 +561,71 @@ export default function ProductDetails({ product }) {
         {hasVariants && (
           <div className="space-y-4 border-t border-neutral-200 pt-4">
             {/* Color Selector */}
-            {availableColors.length > 0 && (
+            {allColors.length > 0 && (
               <div>
                 <h4 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-3">
                   צבע {selectedColor && `- ${selectedColor}`}
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {availableColors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => handleColorSelect(color)}
-                      className={`px-4 py-2 text-sm font-light tracking-wide transition-all border ${
-                        selectedColor === color
-                          ? 'border-black bg-black text-white'
-                          : 'border-neutral-300 hover:border-black bg-white'
-                      }`}
-                    >
-                      {color}
-                    </button>
-                  ))}
+                  {allColors.map((color) => {
+                    const available = isColorAvailable(color);
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => available && handleColorSelect(color)}
+                        disabled={!available}
+                        className={`px-4 py-2 text-sm font-light tracking-wide transition-all border relative ${
+                          selectedColor === color
+                            ? 'border-black bg-black text-white'
+                            : available
+                            ? 'border-neutral-300 hover:border-black bg-white'
+                            : 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <span className={!available ? 'line-through' : ''}>
+                          {color}
+                        </span>
+                        {!available && (
+                          <span className="block text-[10px] text-red-500 font-medium mt-0.5">אזל</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {/* Size Selector */}
-            {availableSizes.length > 0 && (
+            {allSizes.length > 0 && (
               <div>
                 <h4 className="text-xs font-light tracking-widest uppercase text-neutral-600 mb-3">
                   מידה {selectedSize && `- ${selectedSize}`}
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {availableSizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => handleSizeSelect(size)}
-                      className={`px-4 py-2 text-sm font-light tracking-wide transition-all border min-w-[60px] ${
-                        selectedSize === size
-                          ? 'border-black bg-black text-white'
-                          : 'border-neutral-300 hover:border-black bg-white'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {allSizes.map((size) => {
+                    const available = isSizeAvailable(size);
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => available && handleSizeSelect(size)}
+                        disabled={!available}
+                        className={`px-4 py-2 text-sm font-light tracking-wide transition-all border min-w-[60px] relative ${
+                          selectedSize === size
+                            ? 'border-black bg-black text-white'
+                            : available
+                            ? 'border-neutral-300 hover:border-black bg-white'
+                            : 'border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <span className={!available ? 'line-through' : ''}>
+                          {size}
+                        </span>
+                        {!available && (
+                          <span className="block text-[10px] text-red-500 font-medium mt-0.5">אזל</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

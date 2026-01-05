@@ -1,9 +1,64 @@
-export const metadata = {
-  title: 'מדיניות משלוחים | TORINO',
-  description: 'מדיניות המשלוחים וההפצה שלנו',
+// בצד השרת, NEXT_PUBLIC_API_URL לא זמין, אז נשתמש ב-API_URL או localhost
+const getApiUrl = () => {
+  // בצד השרת (SSR)
+  if (typeof window === 'undefined') {
+    return process.env.API_URL || 'http://localhost:5000';
+  }
+  // בצד הלקוח
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 };
 
-export default function ShippingPage() {
+async function getShippingSettings() {
+  try {
+    const apiUrl = getApiUrl();
+    // הסר /api אם כבר קיים ב-API_URL
+    const baseUrl = apiUrl.replace(/\/api$/, '');
+    const res = await fetch(`${baseUrl}/api/settings/shipping`, {
+      cache: 'no-store', // תמיד קבל מידע עדכני
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch shipping settings: ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching shipping settings:', error);
+    // ערכי ברירת מחדל במקרה של שגיאה
+    return {
+      shipping: {
+        flatRate: { ils: 49, usd: 15 },
+        freeShipping: {
+          enabled: false,
+          threshold: { ils: 0, usd: 0 }
+        }
+      }
+    };
+  }
+}
+
+export const metadata = {
+  title: 'מדיניות משלוחים | TORINO',
+  description: 'מדיניות המשלוחים וההפצה שלנו - זמני אספקה, עלויות משלוח ותהליך המשלוח',
+};
+
+export default async function ShippingPage() {
+  const settings = await getShippingSettings();
+  const shippingCost = settings.shipping.flatRate.ils;
+  const freeShippingEnabled = settings.shipping.freeShipping.enabled;
+  const freeShippingThreshold = settings.shipping.freeShipping.threshold.ils;
+
+  // Debug log
+  console.log('Shipping Settings:', {
+    shippingCost,
+    freeShippingEnabled,
+    freeShippingThreshold
+  });
+
   return (
     <div className="bg-white min-h-screen">
       {/* Hero */}
@@ -25,27 +80,16 @@ export default function ShippingPage() {
             <h2 className="text-2xl md:text-3xl font-light mb-6">זמני אספקה</h2>
             <div className="space-y-6">
               <div className="border border-neutral-200 p-6">
-                <h3 className="font-normal text-lg mb-2">משלוח רגיל (3-5 ימי עסקים)</h3>
+                <h3 className="font-normal text-lg mb-2">משלוח סטנדרטי (21-28 ימים)</h3>
                 <p className="text-neutral-600 text-sm mb-2">
-                  המשלוח הסטנדרטי שלנו מגיע תוך 3-5 ימי עסקים ממועד אישור ההזמנה.
+                  המשלוח הסטנדרטי שלנו מגיע תוך 21-28 ימים ממועד אישור ההזמנה.
                 </p>
-                <p className="text-sm">עלות: ₪25 | משלוח חינם בהזמנות מעל ₪200</p>
-              </div>
-
-              <div className="border border-neutral-200 p-6">
-                <h3 className="font-normal text-lg mb-2">משלוח מהיר (1-2 ימי עסקים)</h3>
-                <p className="text-neutral-600 text-sm mb-2">
-                  לאלו שזקוקים למוצר בדחיפות, אנו מציעים משלוח מהיר תוך 1-2 ימי עסקים.
+                <p className="text-sm">
+                  עלות: ₪{shippingCost}
+                  {freeShippingEnabled && freeShippingThreshold > 0 &&
+                    ` | משלוח חינם בהזמנות מעל ₪${freeShippingThreshold}`
+                  }
                 </p>
-                <p className="text-sm">עלות: ₪50</p>
-              </div>
-
-              <div className="border border-neutral-200 p-6">
-                <h3 className="font-normal text-lg mb-2">איסוף עצמי</h3>
-                <p className="text-neutral-600 text-sm mb-2">
-                  ניתן לאסוף את ההזמנה במשרדינו לאחר קבלת הודעה על מוכנות ההזמנה.
-                </p>
-                <p className="text-sm">עלות: חינם</p>
               </div>
             </div>
           </section>
@@ -55,10 +99,26 @@ export default function ShippingPage() {
             <h2 className="text-2xl md:text-3xl font-light mb-6">תהליך המשלוח</h2>
             <div className="space-y-6">
               {[
-                { num: '1', title: 'אישור הזמנה', desc: 'לאחר ביצוע ההזמנה, תקבלו אישור בדוא"ל/SMS תוך מספר דקות.' },
-                { num: '2', title: 'עיבוד ואריזה', desc: 'ההזמנה תעובד תוך 1-2 ימי עסקים. בשלב זה נארוז את המוצרים בקפידה.' },
-                { num: '3', title: 'יציאה למשלוח', desc: 'תקבלו הודעה כולל מספר מעקב כאשר החבילה יוצאת למשלוח.' },
-                { num: '4', title: 'קבלת המשלוח', desc: 'השליח ייצור קשר לתיאום זמן מסירה. במידה ואינכם נמצאים, יושאר פתק עם הוראות.' }
+                {
+                  num: '1',
+                  title: 'אישור הזמנה',
+                  desc: 'לאחר ביצוע ההזמנה, תקבלו אישור בדוא"ל תוך מספר דקות.'
+                },
+                {
+                  num: '2',
+                  title: 'עיבוד ורכישה',
+                  desc: 'ההזמנה תעובד ותירכש מהספק. בשלב זה נוודא את זמינות המוצרים.'
+                },
+                {
+                  num: '3',
+                  title: 'משלוח בינלאומי',
+                  desc: 'המוצרים יישלחו אליכם ביבוא אישי. תקבלו עדכונים על התקדמות המשלוח.'
+                },
+                {
+                  num: '4',
+                  title: 'קבלת המשלוח',
+                  desc: 'המשלוח יגיע עד לבית הלקוח. במקרים חריגים, המערכת שומרת לעצמה את הזכות לשלוח לנקודת מסירה באזור הלקוח.'
+                }
               ].map((step, index) => (
                 <div key={index} className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-8 h-8 border border-black flex items-center justify-center font-light text-sm">
@@ -77,8 +137,8 @@ export default function ShippingPage() {
           <section className="border-t border-neutral-200 pt-12">
             <h2 className="text-2xl md:text-3xl font-light mb-6">אזורי חלוקה</h2>
             <div className="space-y-4 text-neutral-700 text-sm">
-              <p>אנו משלחים לכל רחבי ישראל, כולל יישובים מרוחקים.</p>
-              <p>עבור אזורים מרוחקים (כגון אילת, ערבה, הנגב הדרומי) עשוי להתווסף תוספת משלוח של ₪15-30.</p>
+              <p>אנו משלחים לכל רחבי ישראל.</p>
+              <p>המשלוח מגיע עד לבית הלקוח. במקרים חריגים, המערכת שומרת לעצמה את הזכות לשלוח את המשלוח עד לאזור הלקוח לנקודת מסירה.</p>
               <p>המשלוח מתבצע לכתובת שצוינה בהזמנה בלבד. במידה ונדרש שינוי כתובת, יש ליצור קשר לפני משלוח החבילה.</p>
             </div>
           </section>
@@ -87,8 +147,8 @@ export default function ShippingPage() {
           <section className="border-t border-neutral-200 pt-12">
             <h2 className="text-2xl md:text-3xl font-light mb-6">מעקב אחר משלוח</h2>
             <div className="space-y-4 text-neutral-700 text-sm">
-              <p>כל משלוח כולל מספר מעקב (tracking number) שישלח אליכם בהודעה.</p>
-              <p>ניתן לעקוב אחר המשלוח דרך אתר חברת השילוח או דרך עמוד "ההזמנות שלי" באתר.</p>
+              <p>אנו מעדכנים את לקוחותינו בצורה שוטפת על קצב ההתקדמות של המשלוח.</p>
+              <p>ניתן לעקוב אחר סטטוס ההזמנה דרך עמוד "ההזמנות שלי" באתר.</p>
               <p>במקרה של עיכוב במשלוח, אנו נעדכן אתכם באופן פרואקטיבי.</p>
             </div>
           </section>
@@ -97,9 +157,10 @@ export default function ShippingPage() {
           <section className="border-t border-neutral-200 pt-12">
             <h2 className="text-2xl md:text-3xl font-light mb-6">קבלת המשלוח</h2>
             <div className="space-y-4 text-neutral-700 text-sm">
-              <p>בעת קבלת המשלוח, יש לבדוק את החבילה בפני השליח ולוודא שאין נזק חיצוני.</p>
+              <p>בעת קבלת המשלוח, יש לבדוק את החבילה ולוודא שאין נזק חיצוני.</p>
               <p>במידה ויש נזק גלוי לאריזה, יש לסרב לקבלת המשלוח ולדווח לנו מיידית.</p>
-              <p>לאחר חתימה על קבלת המשלוח, האחריות על המוצר עוברת אליכם.</p>
+              <p>לאחר קבלת המשלוח, האחריות על המוצר עוברת אליכם.</p>
+              <p>כל משלוח כפוף למדיניות ההחזרות שלנו - 14 יום להחזרה או החלפה.</p>
             </div>
           </section>
 
@@ -108,21 +169,41 @@ export default function ShippingPage() {
             <h2 className="text-2xl md:text-3xl font-light mb-6">עלויות משלוח</h2>
             <div className="border border-neutral-200">
               <div className="flex justify-between items-center p-4 border-b border-neutral-200">
-                <span className="text-sm">משלוח רגיל</span>
-                <span className="text-sm">₪25</span>
+                <span className="text-sm">משלוח סטנדרטי (21-28 ימים)</span>
+                <span className="text-sm">₪{shippingCost}</span>
               </div>
-              <div className="flex justify-between items-center p-4 border-b border-neutral-200">
-                <span className="text-sm">משלוח מהיר</span>
-                <span className="text-sm">₪50</span>
-              </div>
-              <div className="flex justify-between items-center p-4 border-b border-neutral-200">
-                <span className="text-sm">תוספת אזור מרוחק</span>
-                <span className="text-sm">₪15-30</span>
-              </div>
-              <div className="flex justify-between items-center p-4 bg-neutral-50">
-                <span className="text-sm font-normal">משלוח חינם</span>
-                <span className="text-sm font-normal">בהזמנות מעל ₪200</span>
-              </div>
+              {freeShippingEnabled && freeShippingThreshold > 0 && (
+                <div className="flex justify-between items-center p-4 bg-neutral-50">
+                  <span className="text-sm font-normal">משלוח חינם</span>
+                  <span className="text-sm font-normal">בהזמנות מעל ₪{freeShippingThreshold}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-neutral-500 mt-4">
+              * המחירים כוללים מע"ם ומחושבים בזמן התשלום
+            </p>
+          </section>
+
+          {/* הערות חשובות */}
+          <section className="border-t border-neutral-200 pt-12">
+            <h2 className="text-2xl md:text-3xl font-light mb-6">הערות חשובות</h2>
+            <div className="bg-neutral-50 border border-neutral-200 p-6 space-y-4 text-sm text-neutral-700">
+              <p className="flex items-start gap-2">
+                <span className="text-lg">•</span>
+                <span>זמני המשלוח הם אומדן ועשויים להשתנות בהתאם לנסיבות.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-lg">•</span>
+                <span>המוצרים מגיעים ביבוא אישי והמשלוח כולל את כל העלויות הנדרשות.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-lg">•</span>
+                <span>במקרים חריגים, המערכת שומרת לעצמה את הזכות לשלוח לנקודת מסירה באזור הלקוח.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-lg">•</span>
+                <span>אנו מעדכנים את קצב ההתקדמות של המשלוח באופן שוטף.</span>
+              </p>
             </div>
           </section>
 
