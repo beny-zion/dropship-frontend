@@ -112,11 +112,20 @@ export async function generateMetadata() {
       siteName: 'TORINO',
       title: 'TORINO - מותגים מקוריים מובילים',
       description: 'מוצרים מקוריים ממותגים מובילים מארה"ב ואירופה. משלוח מהיר ואמין.',
+      images: [
+        {
+          url: '/web-app-manifest-512x512.png',
+          width: 512,
+          height: 512,
+          alt: 'TORINO Logo',
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: 'TORINO - מותגים מקוריים מובילים',
       description: 'מוצרים מקוריים ממותגים מובילים מארה"ב ואירופה.',
+      images: ['/web-app-manifest-512x512.png'],
     },
     robots: {
       index: true,
