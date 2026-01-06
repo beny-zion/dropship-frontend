@@ -847,7 +847,7 @@ export default function ProductDetails({ product }) {
             <div className="flex-1">
               <p className="font-semibold text-amber-900 mb-1">זמן אספקה משוער</p>
               <p className="text-sm text-amber-800">
-                14-21 ימי עסקים (כולל משלוח בינלאומי ומכס)
+                21-28 ימי עסקים (כולל משלוח בינלאומי ומכס)
               </p>
             </div>
           </div>
@@ -856,7 +856,7 @@ export default function ProductDetails({ product }) {
           <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200 p-4">
             <h4 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
               <Plane className="w-4 h-4" />
-              מסלול המשלוח שלך
+              מסע ההזמנה שלך
             </h4>
             <div className="space-y-2 text-xs">
               <div className="flex items-start gap-2">
@@ -865,7 +865,7 @@ export default function ProductDetails({ product }) {
                 </div>
                 <div>
                   <p className="font-semibold text-purple-900">אישור הזמנה</p>
-                  <p className="text-purple-700">אנחנו מאמתים את ההזמנה ומבצעים רכישה מהספק</p>
+                  <p className="text-purple-700">ההזמנה התקבלה ואנחנו מתחילים לטפל בה</p>
                 </div>
               </div>
 
@@ -874,8 +874,8 @@ export default function ProductDetails({ product }) {
                   <span className="text-purple-700 font-bold text-[10px]">2</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-purple-900">הזמנה מהספק</p>
-                  <p className="text-purple-700">המוצר נרכש ונשלח לחברת השילוח שלנו בארה&quot;ב/אירופה</p>
+                  <p className="font-semibold text-purple-900">הכנת המוצר</p>
+                  <p className="text-purple-700">המוצר נארז בקפידה ומוכן למשלוח</p>
                 </div>
               </div>
 
@@ -884,8 +884,8 @@ export default function ProductDetails({ product }) {
                   <span className="text-purple-700 font-bold text-[10px]">3</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-purple-900">בחברת השילוח</p>
-                  <p className="text-purple-700">המוצר מתקבל בארה&quot;ב/אירופה ונארז למשלוח בינלאומי</p>
+                  <p className="font-semibold text-purple-900">בדרך לישראל</p>
+                  <p className="text-purple-700">המשלוח יצא לדרך עם מספר מעקב בינלאומי</p>
                 </div>
               </div>
 
@@ -894,8 +894,8 @@ export default function ProductDetails({ product }) {
                   <span className="text-purple-700 font-bold text-[10px]">4</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-purple-900">במרכז לוגיסטי בישראל</p>
-                  <p className="text-purple-700">המשלוח עבר מכס והגיע למרכז החלוקה</p>
+                  <p className="font-semibold text-purple-900">הגיע לארץ</p>
+                  <p className="text-purple-700">עבר מכס ומוכן להפצה - הכל כלול במחיר</p>
                 </div>
               </div>
 
@@ -904,8 +904,8 @@ export default function ProductDetails({ product }) {
                   <span className="text-purple-700 font-bold text-[10px]">5</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-purple-900">במשלוח אליך</p>
-                  <p className="text-purple-700">המוצר בדרך לכתובת שלך</p>
+                  <p className="font-semibold text-purple-900">בדרך אליך</p>
+                  <p className="text-purple-700">השליח יצר קשר ומתאם איתך את המשלוח</p>
                 </div>
               </div>
 
@@ -914,15 +914,15 @@ export default function ProductDetails({ product }) {
                   <CheckCircle className="w-3 h-3 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-green-900">הגיע!</p>
-                  <p className="text-green-700">המוצר התקבל בהצלחה</p>
+                  <p className="font-semibold text-green-900">נמסר!</p>
+                  <p className="text-green-700">תהנו מהמוצר החדש</p>
                 </div>
               </div>
             </div>
 
             <div className="mt-3 pt-3 border-t border-purple-200">
               <p className="text-xs text-purple-700">
-                <strong>שימו לב:</strong> תקבלו עדכוני SMS ומייל בכל שלב + מספר מעקב בינלאומי
+                <strong>נעדכן אותך:</strong> מייל בכל שלב 
               </p>
             </div>
           </div>
