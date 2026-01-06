@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Save, Loader2, Eye, DollarSign, Calculator, Info, Image as ImageIcon, ExternalLink, ShoppingCart, FolderPlus } from 'lucide-react';
+import { ArrowRight, Save, Loader2, Eye, DollarSign, Calculator, Info, Image as ImageIcon, ExternalLink, ShoppingCart, FolderPlus, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import ImageUpload from '@/components/admin/ImageUpload';
@@ -26,8 +26,11 @@ export default function ProductEditPage() {
   const queryClient = useQueryClient();
   const isNew = params.id === 'new';
   const [viewMode, setViewMode] = useState('calculator'); // 'preview', 'calculator', or 'none'
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [showAiInput, setShowAiInput] = useState(false);
+  const [aiRawText, setAiRawText] = useState('');
 
-  const { register, handleSubmit, formState: { errors }, reset, watch, control } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, watch, control, setValue } = useForm({
     defaultValues: {
       asin: '',
       name_he: '',
@@ -238,6 +241,315 @@ export default function ProductEditPage() {
     };
   }, [baseCostIls, taxPercent, shippingCostIls, additionalFeesIls, priceIls]);
 
+  // Handle AI fill from raw text
+  const handleAiFill = async () => {
+    if (!aiRawText || aiRawText.trim().length < 20) {
+      toast.error('נא להדביק טקסט מספיק ארוך (לפחות 20 תווים)');
+      return;
+    }
+
+    setAiProcessing(true);
+    try {
+      const response = await adminApi.processWithAI(aiRawText);
+      console.log('🤖 AI Full Response:', response);
+      console.log('🤖 response.success:', response?.success);
+      console.log('🤖 response.data:', response?.data);
+      console.log('🤖 typeof response:', typeof response);
+
+      // בדיקה אם יש success בתגובה (מבנה { success, data, message })
+      // axios interceptor מחזיר response.data ישירות
+      // אז response = { success: true, data: {...}, message: '...' }
+      let ai = null;
+
+      if (response?.success === true && response?.data) {
+        // התגובה היא ישירות { success: true, data: {...} }
+        ai = response.data;
+        console.log('✅ Path 1: Found AI data in response.data');
+      } else if (response?.data?.success === true && response?.data?.data) {
+        // התגובה היא nested { data: { success: true, data: {...} } }
+        ai = response.data.data;
+        console.log('✅ Path 2: Found AI data in response.data.data');
+      } else {
+        console.log('⚠️ Neither path matched');
+        console.log('⚠️ response?.success:', response?.success, '(type:', typeof response?.success, ')');
+        console.log('⚠️ response?.data:', response?.data);
+      }
+
+      console.log('🤖 AI Data to use:', ai);
+
+      if (ai) {
+        // חישוב מחירים לפי כללי התמחור
+        // מחיר מקורי בדולר -> מחיר מכירה בדולר -> מחיר בשקלים
+        const USD_TO_ILS = 3.2; // שער המרה קבוע
+        let calculatedPrices = {
+          originalPriceUsd: null,
+          sellPriceUsd: null,
+          sellPriceIls: null,
+          baseCostUsd: null,
+          baseCostIls: null,
+          multiplier: null
+        };
+
+        // חילוץ מחיר - מנסה כמה מקומות אפשריים
+        let originalUsd = null;
+
+        // נסה לחלץ מחיר מכל המקומות האפשריים
+        const priceFromOriginal = ai.originalPrice?.usd;
+        const priceFromPrice = ai.price?.usd;
+        const priceDirectOriginal = typeof ai.originalPrice === 'number' ? ai.originalPrice : null;
+        const priceDirectPrice = typeof ai.price === 'number' ? ai.price : null;
+
+        // בחר את המחיר הראשון שהוא מספר תקין וגדול מ-0
+        const possiblePrices = [priceFromOriginal, priceFromPrice, priceDirectOriginal, priceDirectPrice]
+          .map(p => parseFloat(p))
+          .filter(p => !isNaN(p) && p > 0);
+
+        if (possiblePrices.length > 0) {
+          originalUsd = possiblePrices[0];
+        }
+
+        console.log('💰 Price extraction:', {
+          'ai.originalPrice': ai.originalPrice,
+          'ai.price': ai.price,
+          'possiblePrices': possiblePrices,
+          'selected originalUsd': originalUsd
+        });
+
+        if (originalUsd && !isNaN(originalUsd) && originalUsd > 0) {
+          calculatedPrices.originalPriceUsd = originalUsd;
+          calculatedPrices.baseCostUsd = originalUsd;
+          calculatedPrices.baseCostIls = Math.round(originalUsd * USD_TO_ILS);
+
+          // כללי תמחור:
+          // עד $50 -> x2
+          // $50-$99 -> x1.9
+          // $100+ -> x1.8
+          let multiplier;
+          if (originalUsd <= 50) {
+            multiplier = 2.0;
+          } else if (originalUsd <= 99) {
+            multiplier = 1.9;
+          } else {
+            multiplier = 1.8;
+          }
+
+          calculatedPrices.multiplier = multiplier;
+          calculatedPrices.sellPriceUsd = Math.round(originalUsd * multiplier * 100) / 100;
+          calculatedPrices.sellPriceIls = Math.round(calculatedPrices.sellPriceUsd * USD_TO_ILS);
+
+          console.log('💰 Price calculation SUCCESS:', calculatedPrices);
+        } else {
+          console.warn('⚠️ No valid price found in AI response');
+        }
+
+        // בניית מערך ווריאנטים מהנתונים שהתקבלו
+        let variants = formValues.variants || [];
+
+        // אם יש ווריאנטים מה-AI, השתמש בהם
+        if (ai.variants && Array.isArray(ai.variants) && ai.variants.length > 0) {
+          variants = ai.variants.map((v, idx) => {
+            // עיבוד תמונות הווריאנט אם קיימות
+            let variantImages = [];
+            if (v.images && Array.isArray(v.images) && v.images.length > 0) {
+              variantImages = v.images.map((img, imgIdx) => ({
+                url: typeof img === 'string' ? img : img.url,
+                alt: typeof img === 'string' ? '' : (img.alt || ''),
+                isPrimary: imgIdx === 0
+              }));
+            }
+            return {
+              sku: v.sku || `SKU-${Date.now()}-${idx}`,
+              color: v.color || '',
+              size: v.size || '',
+              images: variantImages,
+              stock: { available: true, quantity: null },
+              additionalCost: { usd: 0, ils: 0 },
+              supplierLink: v.supplierLink || ''
+            };
+          });
+        }
+        // אם אין ווריאנטים אבל יש צבעים/מידות, צור ווריאנטים מהם
+        else if ((ai.availableColors?.length > 0 || ai.availableSizes?.length > 0)) {
+          const colors = ai.availableColors || [''];
+          const sizes = ai.availableSizes || [''];
+          variants = [];
+          colors.forEach((color, cIdx) => {
+            sizes.forEach((size, sIdx) => {
+              variants.push({
+                sku: `SKU-${Date.now()}-${cIdx}-${sIdx}`,
+                color: color || '',
+                size: size || '',
+                images: [],
+                stock: { available: true, quantity: null },
+                additionalCost: { usd: 0, ils: 0 }
+              });
+            });
+          });
+        }
+
+        // בניית מערך תמונות
+        let images = formValues.images || [];
+        if (ai.images && Array.isArray(ai.images) && ai.images.length > 0) {
+          images = ai.images.map((img, idx) => ({
+            url: typeof img === 'string' ? img : img.url,
+            alt: typeof img === 'string' ? '' : (img.alt || ''),
+            isPrimary: idx === 0
+          }));
+        }
+
+        // לוג של כל הערכים שעומדים להיכנס לטופס
+        console.log('📝 Values to set in form:', {
+          specifications: {
+            brand: ai.specifications?.brand,
+            model: ai.specifications?.model,
+            weight: ai.specifications?.weight,
+            dimensions: ai.specifications?.dimensions
+          },
+          prices: calculatedPrices,
+          links: ai.links,
+          supplier: {
+            name: ai.specifications?.brand || ai.supplier?.name,
+            url: ai.links?.supplierUrl || ai.supplier?.url
+          },
+          imagesCount: images.length,
+          variantsCount: variants.length
+        });
+
+        // עדכון השדות בטופס - בניית אובייקט הערכים
+        const newFormValues = {
+          ...formValues,
+          // מידע בסיסי
+          asin: ai.asin || formValues.asin || '',
+          name_he: ai.name_he || '',
+          name_en: ai.name_en || '',
+          description_he: ai.description_he || '',
+          description_en: ai.description_en || '',
+
+          // מפרט טכני
+          'specifications.brand': ai.specifications?.brand || '',
+          'specifications.model': ai.specifications?.model || '',
+          'specifications.weight': ai.specifications?.weight || '',
+          'specifications.dimensions': ai.specifications?.dimensions || '',
+          'specifications.material': ai.specifications?.material || '',
+
+          // תכונות ותגיות
+          features: ai.features ? ai.features.join('\n') : '',
+          tags: ai.tags ? ai.tags.join(', ') : '',
+
+          // מחירים - מחושבים לפי כללי התמחור
+          // מחיר מכירה (מחושב)
+          'price.usd': calculatedPrices.sellPriceUsd || formValues['price.usd'] || '',
+          'price.ils': calculatedPrices.sellPriceIls || formValues['price.ils'] || '',
+          // מחיר מקורי (לפני הנחה - אם רוצים להציג)
+          'originalPrice.usd': calculatedPrices.originalPriceUsd || '',
+          'originalPrice.ils': calculatedPrices.baseCostIls || '',
+          // עלות בסיס (מחיר הספק)
+          'costBreakdown.baseCost.usd': calculatedPrices.baseCostUsd || '',
+          'costBreakdown.baseCost.ils': calculatedPrices.baseCostIls || '',
+
+          // קישורים
+          'links.amazon': ai.links?.amazon || formValues['links.amazon'] || '',
+          'links.supplierUrl': ai.links?.supplierUrl || formValues['links.supplierUrl'] || '',
+
+          // ספק
+          'supplier.name': ai.specifications?.brand || ai.supplier?.name || formValues['supplier.name'] || 'Amazon',
+          'supplier.url': ai.links?.supplierUrl || ai.supplier?.url || formValues['supplier.url'] || '',
+          'supplier.notes': ai.supplier?.notes || formValues['supplier.notes'] || '',
+
+          // משלוח
+          'shipping.estimatedDays': ai.shipping?.estimatedDays || formValues['shipping.estimatedDays'] || 14,
+          'shipping.freeShipping': ai.shipping?.freeShipping || false,
+
+          // דירוג
+          'rating.amazonRating': ai.rating?.amazonRating || ai.rating?.average || '',
+          'rating.amazonReviewsCount': ai.rating?.amazonReviewsCount || ai.rating?.count || '',
+
+          // תמונות וווריאנטים
+          images: images,
+          variants: variants
+        };
+
+        console.log('🔄 Setting form values with setValue:', {
+          'price.ils': newFormValues['price.ils'],
+          'price.usd': newFormValues['price.usd'],
+          'supplier.name': newFormValues['supplier.name'],
+          'specifications.brand': newFormValues['specifications.brand'],
+          imagesCount: newFormValues.images?.length
+        });
+
+        // שימוש ב-setValue לכל שדה כי reset() לא עובד עם נוטציית נקודות
+        // שדות בסיסיים
+        if (newFormValues.asin) setValue('asin', newFormValues.asin);
+        if (newFormValues.name_he) setValue('name_he', newFormValues.name_he);
+        if (newFormValues.name_en) setValue('name_en', newFormValues.name_en);
+        if (newFormValues.description_he) setValue('description_he', newFormValues.description_he);
+        if (newFormValues.description_en) setValue('description_en', newFormValues.description_en);
+
+        // מפרט טכני
+        if (newFormValues['specifications.brand']) setValue('specifications.brand', newFormValues['specifications.brand']);
+        if (newFormValues['specifications.model']) setValue('specifications.model', newFormValues['specifications.model']);
+        if (newFormValues['specifications.weight']) setValue('specifications.weight', newFormValues['specifications.weight']);
+        if (newFormValues['specifications.dimensions']) setValue('specifications.dimensions', newFormValues['specifications.dimensions']);
+        if (newFormValues['specifications.material']) setValue('specifications.material', newFormValues['specifications.material']);
+
+        // תכונות ותגיות
+        if (newFormValues.features) setValue('features', newFormValues.features);
+        if (newFormValues.tags) setValue('tags', newFormValues.tags);
+
+        // מחירים - עדכון תמיד (גם אם 0)
+        setValue('price.usd', newFormValues['price.usd'] || '');
+        setValue('price.ils', newFormValues['price.ils'] || '');
+        setValue('originalPrice.usd', newFormValues['originalPrice.usd'] || '');
+        setValue('originalPrice.ils', newFormValues['originalPrice.ils'] || '');
+
+        // עלות בסיס
+        setValue('costBreakdown.baseCost.usd', newFormValues['costBreakdown.baseCost.usd'] || '');
+        setValue('costBreakdown.baseCost.ils', newFormValues['costBreakdown.baseCost.ils'] || '');
+
+        // קישורים
+        if (newFormValues['links.amazon']) setValue('links.amazon', newFormValues['links.amazon']);
+        if (newFormValues['links.supplierUrl']) setValue('links.supplierUrl', newFormValues['links.supplierUrl']);
+
+        // ספק
+        if (newFormValues['supplier.name']) setValue('supplier.name', newFormValues['supplier.name']);
+        if (newFormValues['supplier.url']) setValue('supplier.url', newFormValues['supplier.url']);
+        if (newFormValues['supplier.notes']) setValue('supplier.notes', newFormValues['supplier.notes']);
+
+        // משלוח
+        if (newFormValues['shipping.estimatedDays']) setValue('shipping.estimatedDays', newFormValues['shipping.estimatedDays']);
+        setValue('shipping.freeShipping', newFormValues['shipping.freeShipping'] || false);
+
+        // תמונות וווריאנטים (מערכים)
+        if (newFormValues.images?.length > 0) setValue('images', newFormValues.images);
+        if (newFormValues.variants?.length > 0) setValue('variants', newFormValues.variants);
+
+        console.log('✅ All setValue calls completed');
+
+        // הצגת סיכום מה התקבל
+        const summary = [];
+        if (ai.images?.length) summary.push(`${ai.images.length} תמונות`);
+        if (variants.length) summary.push(`${variants.length} ווריאנטים`);
+        if (calculatedPrices.originalPriceUsd) {
+          summary.push(`עלות: $${calculatedPrices.originalPriceUsd} → מכירה: $${calculatedPrices.sellPriceUsd} (x${calculatedPrices.multiplier})`);
+        }
+        if (ai.rating?.average) summary.push(`דירוג: ${ai.rating.average}⭐`);
+
+        const summaryText = summary.length > 0 ? ` (${summary.join(', ')})` : '';
+        toast.success(`הנתונים מולאו בהצלחה!${summaryText} אנא בדוק ועדכן לפי הצורך.`);
+        setShowAiInput(false);
+        setAiRawText('');
+      } else {
+        console.error('AI Response not successful:', response);
+        toast.error(response?.message || 'שגיאה בעיבוד AI');
+      }
+    } catch (error) {
+      console.error('AI Error:', error);
+      toast.error(error.response?.data?.message || error.message || 'שגיאה בעיבוד AI');
+    } finally {
+      setAiProcessing(false);
+    }
+  };
+
   // ✅ Clean Update Mutation - NO availability logic!
   const updateMutation = useMutation({
     mutationFn: async (data) => {
@@ -443,8 +755,88 @@ export default function ProductEditPage() {
             <Calculator className="w-4 h-4 ml-2" />
             מחשבון
           </Button>
+          <Button
+            variant={showAiInput ? 'default' : 'outline'}
+            onClick={() => setShowAiInput(!showAiInput)}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white border-0"
+          >
+            <Sparkles className="w-4 h-4 ml-2" />
+            מילוי AI
+          </Button>
         </div>
       </div>
+
+      {/* AI Input Modal */}
+      {showAiInput && (
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-6 h-6 text-purple-600" />
+              <div>
+                <h3 className="font-semibold text-purple-900">מילוי אוטומטי עם AI</h3>
+                <p className="text-sm text-purple-700">הדבק טקסט גולמי מדף מוצר (אמזון, AliExpress וכו&apos;)</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAiInput(false)}
+              className="text-purple-600 hover:text-purple-800"
+            >
+              ✕
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <Textarea
+              value={aiRawText}
+              onChange={(e) => setAiRawText(e.target.value)}
+              placeholder="הדבק כאן את תיאור המוצר בלבד (לא כל קוד הדף!)&#10;&#10;טיפ: סמן רק את אזור תיאור המוצר באתר המקור והעתק.&#10;⚠️ אל תעתיק את כל קוד המקור - רק הטקסט הרלוונטי!"
+              rows={8}
+              className="bg-white border-2 border-purple-200 focus:border-purple-400"
+              dir="auto"
+            />
+
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-purple-600">
+                {aiRawText.length > 0
+                  ? `${aiRawText.length.toLocaleString()} תווים`
+                  : 'נא להדביק לפחות 20 תווים'}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setAiRawText('');
+                    setShowAiInput(false);
+                  }}
+                >
+                  ביטול
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleAiFill}
+                  disabled={aiProcessing || aiRawText.length < 20}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                >
+                  {aiProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                      מעבד...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 ml-2" />
+                      עבד עם AI
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* לינק קניה מהיר */}
       {!isNew && (formValues['links.amazon'] || formValues['links.supplierUrl'] || formValues['supplier.url']) && (

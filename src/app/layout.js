@@ -97,14 +97,14 @@ export async function generateMetadata() {
       address: false,
       telephone: false,
     },
-    icons: {
-      icon: [
-        { url: '/favicon.svg', type: 'image/svg+xml' },
-        { url: '/favicon.ico', sizes: 'any' },
-        { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
-      ],
-      apple: '/apple-touch-icon.png',
-    },
+   // בתוך layout.js - עדכון מערך האייקונים
+icons: {
+  icon: [
+    { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    { url: '/favicon.ico', sizes: 'any' },
+  ],
+  apple: '/apple-touch-icon.png',
+},
     openGraph: {
       type: 'website',
       locale: 'he_IL',

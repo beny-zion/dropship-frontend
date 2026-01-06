@@ -48,6 +48,7 @@ export default function CheckoutPage() {
   const [saveAddress, setSaveAddress] = useState(true); // Save address by default
   const [orderId, setOrderId] = useState(null);
   const [orderNumber, setOrderNumber] = useState(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false); // ✅ FIX: מונע redirect לעגלה אחרי תשלום מוצלח
 
   const { data: addressesData, isLoading: addressesLoading } = useAddresses();
   // Handle both array and object with data property
@@ -101,13 +102,15 @@ export default function CheckoutPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty (but not after successful payment)
+  // ✅ FIX: מונע race condition - אחרי תשלום מוצלח העגלה נמחקת ב-Backend
+  // בלי הבדיקה הזו, ה-useEffect היה מעביר לעגלה במקום לדף ההזמנה
   useEffect(() => {
-    if (cart.items.length === 0) {
+    if (cart.items.length === 0 && !paymentCompleted && step === 1) {
       toast.error('העגלה ריקה');
       router.push('/cart');
     }
-  }, [cart.items.length, router]);
+  }, [cart.items.length, router, paymentCompleted, step]);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -207,6 +210,9 @@ export default function CheckoutPage() {
             orderId={orderId}
             amount={cart.pricing?.total}
             onSuccess={() => {
+              // ✅ FIX: סמן שהתשלום הושלם *לפני* רענון העגלה
+              // זה מונע race condition עם useEffect שבודק עגלה ריקה
+              setPaymentCompleted(true);
               toast.success('התשלום אושר בהצלחה!');
               // ✅ העגלה כבר נמחקה ב-Backend (paymentController.js)
               // פשוט נסמן ל-React Query שצריך לרענן

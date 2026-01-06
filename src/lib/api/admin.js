@@ -248,6 +248,20 @@ export const adminApi = {
   // Send email to external address
   sendExternalEmail: async (data) => {
     return await apiClient.post('/admin/email/send-external', data);
+  },
+
+  // ============================================
+  // AI PRODUCT PROCESSING
+  // ============================================
+
+  // Process raw product text with AI
+  processWithAI: async (rawData) => {
+    return await apiClient.post('/admin/ai/process-product', { rawData });
+  },
+
+  // Get AI status
+  getAIStatus: async () => {
+    return await apiClient.get('/admin/ai/status');
   }
 };
 
