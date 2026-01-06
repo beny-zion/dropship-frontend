@@ -5,9 +5,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin';
+import { getCategories } from '@/lib/api/categories';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Plus,
   Search,
@@ -16,7 +24,10 @@ import {
   Package,
   AlertCircle,
   Star,
-  StarOff
+  StarOff,
+  Filter,
+  X,
+  SortAsc
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -25,27 +36,58 @@ export default function ProductsManagementPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [category, setCategory] = useState('');
+  const [inStock, setInStock] = useState('');
+  const [featured, setFeatured] = useState('');
+  const [lowStock, setLowStock] = useState('');
+  const [sortBy, setSortBy] = useState('-createdAt');
   const limit = 20;
+
+  // Fetch categories for filter
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => getCategories(false)
+  });
+  const categories = categoriesData?.data || [];
+
+  // Build filters object
+  const filters = {
+    search,
+    page,
+    limit,
+    sortBy,
+    ...(category && { category }),
+    ...(inStock && { inStock }),
+    ...(featured && { featured }),
+    ...(lowStock && { lowStock })
+  };
 
   // Fetch products
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'products', { search, page, limit }],
-    queryFn: () => adminApi.getAllProducts({
-      search,
-      page,
-      limit
-    })
+    queryKey: ['admin', 'products', filters],
+    queryFn: () => adminApi.getAllProducts(filters)
   });
+
+  // Check if any filters are active
+  const hasActiveFilters = category || inStock || featured || lowStock || search;
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearch('');
+    setCategory('');
+    setInStock('');
+    setFeatured('');
+    setLowStock('');
+    setSortBy('-createdAt');
+    setPage(1);
+  };
 
   // Delete product mutation
   const deleteMutation = useMutation({
     mutationFn: (id) => adminApi.deleteProduct(id),
     onSuccess: () => {
       toast.success('המוצר נמחק בהצלחה');
-      // Invalidate with exact query key pattern
       queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
-      // Also refetch the current query immediately
-      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, page, limit }] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'שגיאה במחיקת המוצר');
@@ -58,7 +100,6 @@ export default function ProductsManagementPage() {
     onSuccess: () => {
       toast.success('סטטוס מומלץ עודכן');
       queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
-      queryClient.refetchQueries({ queryKey: ['admin', 'products', { search, page, limit }] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'שגיאה בעדכון');
@@ -111,29 +152,145 @@ export default function ProductsManagementPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">סינון וחיפוש</span>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="mr-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <X className="w-4 h-4 ml-1" />
+              נקה הכל
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search */}
-          <div className="relative">
+          <div className="relative lg:col-span-2">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="חיפוש לפי שם או ASIN..."
+              placeholder="חיפוש לפי שם מוצר או ASIN..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="pr-10"
             />
           </div>
 
-          {/* Clear Search */}
-          {search && (
-            <Button
-              variant="outline"
-              onClick={() => setSearch('')}
-            >
-              נקה חיפוש
-            </Button>
-          )}
+          {/* Category Filter */}
+          <Select value={category} onValueChange={(value) => { setCategory(value === 'all' ? '' : value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="כל הקטגוריות" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל הקטגוריות</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat._id} value={cat._id}>
+                  {cat.name?.he || cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Availability Filter */}
+          <Select value={inStock} onValueChange={(value) => { setInStock(value === 'all' ? '' : value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="כל המצבים" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל המצבים</SelectItem>
+              <SelectItem value="true">במלאי</SelectItem>
+              <SelectItem value="false">לא במלאי</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        {/* Second Row - More Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          {/* Featured Filter */}
+          <Select value={featured} onValueChange={(value) => { setFeatured(value === 'all' ? '' : value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="הכל (מומלץ/לא)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">הכל (מומלץ/לא)</SelectItem>
+              <SelectItem value="true">מוצרים מומלצים</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Low Stock Filter */}
+          <Select value={lowStock} onValueChange={(value) => { setLowStock(value === 'all' ? '' : value); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="כל המלאי" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל המלאי</SelectItem>
+              <SelectItem value="true">מלאי נמוך (פחות מ-10)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Sort By */}
+          <Select value={sortBy} onValueChange={(value) => { setSortBy(value); setPage(1); }}>
+            <SelectTrigger>
+              <SortAsc className="w-4 h-4 ml-2 text-gray-400" />
+              <SelectValue placeholder="מיון" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="-createdAt">חדש ביותר</SelectItem>
+              <SelectItem value="createdAt">ישן ביותר</SelectItem>
+              <SelectItem value="name_he">שם (א-ת)</SelectItem>
+              <SelectItem value="-name_he">שם (ת-א)</SelectItem>
+              <SelectItem value="-price.ils">מחיר (גבוה לנמוך)</SelectItem>
+              <SelectItem value="price.ils">מחיר (נמוך לגבוה)</SelectItem>
+              <SelectItem value="-stock.quantity">מלאי (גבוה לנמוך)</SelectItem>
+              <SelectItem value="stock.quantity">מלאי (נמוך לגבוה)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+            <span className="text-xs text-gray-500">פילטרים פעילים:</span>
+            {search && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                חיפוש: {search}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setSearch('')} />
+              </Badge>
+            )}
+            {category && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                קטגוריה: {categories.find(c => c._id === category)?.name?.he || 'נבחרה'}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setCategory('')} />
+              </Badge>
+            )}
+            {inStock && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                {inStock === 'true' ? 'במלאי' : 'לא במלאי'}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setInStock('')} />
+              </Badge>
+            )}
+            {featured && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                מוצרים מומלצים
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setFeatured('')} />
+              </Badge>
+            )}
+            {lowStock && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                מלאי נמוך
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setLowStock('')} />
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Products Table */}
