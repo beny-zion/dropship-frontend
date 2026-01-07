@@ -19,6 +19,7 @@ import ImageUpload from '@/components/admin/ImageUpload';
 import VariantManager from '@/components/admin/VariantManager';
 import TagInput from '@/components/admin/TagInput';
 import Image from 'next/image';
+import { useTags } from '@/lib/hooks/useTags';
 
 export default function ProductEditPage() {
   const router = useRouter();
@@ -29,6 +30,9 @@ export default function ProductEditPage() {
   const [aiProcessing, setAiProcessing] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiRawText, setAiRawText] = useState('');
+
+  // Fetch existing tags for AI suggestions
+  const { tags: existingTags } = useTags(50); // Get top 50 tags
 
   const { register, handleSubmit, formState: { errors }, reset, watch, control, setValue } = useForm({
     defaultValues: {
@@ -250,7 +254,11 @@ export default function ProductEditPage() {
 
     setAiProcessing(true);
     try {
-      const response = await adminApi.processWithAI(aiRawText);
+      // הכנת רשימת התגיות הקיימות לשליחה ל-AI
+      const existingTagsList = existingTags.map(t => t.tag);
+      console.log('📋 Sending existing tags to AI:', existingTagsList);
+
+      const response = await adminApi.processWithAI(aiRawText, existingTagsList);
       console.log('🤖 AI Full Response:', response);
       console.log('🤖 response.success:', response?.success);
       console.log('🤖 response.data:', response?.data);

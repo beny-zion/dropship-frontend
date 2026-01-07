@@ -189,6 +189,16 @@ export const adminApi = {
     return await apiClient.post('/admin/settings/reset');
   },
 
+  // Get pricing config for inventory check
+  getPricingConfig: async () => {
+    return await apiClient.get('/admin/settings/pricing');
+  },
+
+  // Calculate recommended sell price
+  calculatePrice: async (usdCost) => {
+    return await apiClient.post('/admin/settings/calculate-price', { usdCost });
+  },
+
   // ============================================
   // USERS MANAGEMENT
   // ============================================
@@ -255,8 +265,8 @@ export const adminApi = {
   // ============================================
 
   // Process raw product text with AI
-  processWithAI: async (rawData) => {
-    return await apiClient.post('/admin/ai/process-product', { rawData });
+  processWithAI: async (rawData, existingTags = []) => {
+    return await apiClient.post('/admin/ai/process-product', { rawData, existingTags });
   },
 
   // Get AI status

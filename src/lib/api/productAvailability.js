@@ -144,6 +144,33 @@ export const productAvailabilityApi = {
       console.error('🔴 [productAvailabilityApi] Error response:', error.response);
       throw error;
     }
+  },
+
+  /**
+   * עדכון מחיר מוצר (עם חישוב מחיר מכירה)
+   *
+   * @param {string} productId - מזהה המוצר
+   * @param {Object} data - נתונים
+   * @param {number} data.newUsdCost - עלות דולרית חדשה
+   * @param {boolean} data.confirmOnly - אישור מחיר ללא שינוי (עדכון timestamp בלבד)
+   * @param {string} data.notes - הערות
+   */
+  updatePrice: async (productId, data) => {
+    console.log('🟡 [productAvailabilityApi] updatePrice called');
+    console.log('🟡 [productAvailabilityApi] Product ID:', productId);
+    console.log('🟡 [productAvailabilityApi] Data:', JSON.stringify(data, null, 2));
+
+    const url = `/admin/products/${productId}/update-price`;
+
+    try {
+      const response = await apiClient.post(url, data);
+      console.log('🟡 [productAvailabilityApi] updatePrice Response:', response);
+      return response;
+    } catch (error) {
+      console.error('🔴 [productAvailabilityApi] updatePrice Error:', error);
+      console.error('🔴 [productAvailabilityApi] Error response:', error.response);
+      throw error;
+    }
   }
 };
 

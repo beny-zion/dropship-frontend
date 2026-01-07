@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, RotateCcw, DollarSign, ShoppingCart, Mail, Settings2, Globe } from 'lucide-react';
+import { Loader2, Save, RotateCcw, DollarSign, ShoppingCart, Mail, Settings2, Globe, Calculator } from 'lucide-react';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -36,6 +36,14 @@ export default function SettingsPage() {
   const [siteName, setSiteName] = useState('Amazon Dropship');
   const [currency, setCurrency] = useState('BOTH');
   const [timezone, setTimezone] = useState('Asia/Jerusalem');
+
+  // Pricing Form state
+  const [usdToIls, setUsdToIls] = useState(3.2);
+  const [tier1MaxPrice, setTier1MaxPrice] = useState(50);
+  const [tier1Multiplier, setTier1Multiplier] = useState(2.0);
+  const [tier2MaxPrice, setTier2MaxPrice] = useState(99);
+  const [tier2Multiplier, setTier2Multiplier] = useState(1.9);
+  const [tier3Multiplier, setTier3Multiplier] = useState(1.8);
 
   useEffect(() => {
     loadSettings();
@@ -77,6 +85,14 @@ export default function SettingsPage() {
       setSiteName(data.general?.siteName ?? 'Amazon Dropship');
       setCurrency(data.general?.currency ?? 'BOTH');
       setTimezone(data.general?.timezone ?? 'Asia/Jerusalem');
+
+      // Update pricing form state
+      setUsdToIls(data.pricing?.usdToIls ?? 3.2);
+      setTier1MaxPrice(data.pricing?.multipliers?.tier1?.maxPrice ?? 50);
+      setTier1Multiplier(data.pricing?.multipliers?.tier1?.multiplier ?? 2.0);
+      setTier2MaxPrice(data.pricing?.multipliers?.tier2?.maxPrice ?? 99);
+      setTier2Multiplier(data.pricing?.multipliers?.tier2?.multiplier ?? 1.9);
+      setTier3Multiplier(data.pricing?.multipliers?.tier3?.multiplier ?? 1.8);
     } catch (error) {
       console.error('Failed to load settings:', error);
       toast.error(`שגיאה בטעינת הגדרות: ${error.message}`);
@@ -122,6 +138,22 @@ export default function SettingsPage() {
           siteName: siteName,
           currency: currency,
           timezone: timezone
+        },
+        pricing: {
+          usdToIls: parseFloat(usdToIls),
+          multipliers: {
+            tier1: {
+              maxPrice: parseFloat(tier1MaxPrice),
+              multiplier: parseFloat(tier1Multiplier)
+            },
+            tier2: {
+              maxPrice: parseFloat(tier2MaxPrice),
+              multiplier: parseFloat(tier2Multiplier)
+            },
+            tier3: {
+              multiplier: parseFloat(tier3Multiplier)
+            }
+          }
         }
       };
 
@@ -219,6 +251,145 @@ export default function SettingsPage() {
                 <SelectItem value="Europe/London">לונדון (Europe/London)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pricing Settings - Inventory Check */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="w-5 h-5" />
+            הגדרות תמחור (מצפן מלאי)
+          </CardTitle>
+          <CardDescription>
+            שער המרה ומכפילים לחישוב מחירי מכירה
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="usd-to-ils">שער המרה USD → ILS</Label>
+            <Input
+              id="usd-to-ils"
+              type="number"
+              min="1"
+              step="0.01"
+              value={usdToIls}
+              onChange={(e) => setUsdToIls(e.target.value)}
+              placeholder="3.2"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              שער ההמרה מדולר לשקל
+            </p>
+          </div>
+
+          {/* Tier 1 */}
+          <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+            <p className="text-sm font-semibold text-blue-800">רמה 1 - מוצרים זולים</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="tier1-max">מחיר מקסימלי ($)</Label>
+                <Input
+                  id="tier1-max"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={tier1MaxPrice}
+                  onChange={(e) => setTier1MaxPrice(e.target.value)}
+                  placeholder="50"
+                />
+                <p className="text-xs text-gray-500 mt-1">עד סכום זה</p>
+              </div>
+              <div>
+                <Label htmlFor="tier1-mult">מכפיל</Label>
+                <Input
+                  id="tier1-mult"
+                  type="number"
+                  min="1"
+                  step="0.1"
+                  value={tier1Multiplier}
+                  onChange={(e) => setTier1Multiplier(e.target.value)}
+                  placeholder="2.0"
+                />
+                <p className="text-xs text-gray-500 mt-1">x{tier1Multiplier}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier 2 */}
+          <div className="bg-green-50 p-4 rounded-lg space-y-3">
+            <p className="text-sm font-semibold text-green-800">רמה 2 - מוצרים בינוניים</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="tier2-max">מחיר מקסימלי ($)</Label>
+                <Input
+                  id="tier2-max"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={tier2MaxPrice}
+                  onChange={(e) => setTier2MaxPrice(e.target.value)}
+                  placeholder="99"
+                />
+                <p className="text-xs text-gray-500 mt-1">${tier1MaxPrice + 1} - ${tier2MaxPrice}</p>
+              </div>
+              <div>
+                <Label htmlFor="tier2-mult">מכפיל</Label>
+                <Input
+                  id="tier2-mult"
+                  type="number"
+                  min="1"
+                  step="0.1"
+                  value={tier2Multiplier}
+                  onChange={(e) => setTier2Multiplier(e.target.value)}
+                  placeholder="1.9"
+                />
+                <p className="text-xs text-gray-500 mt-1">x{tier2Multiplier}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier 3 */}
+          <div className="bg-purple-50 p-4 rounded-lg space-y-3">
+            <p className="text-sm font-semibold text-purple-800">רמה 3 - מוצרים יקרים</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">מחיר</p>
+                <p className="text-sm font-medium">${tier2MaxPrice}+</p>
+              </div>
+              <div>
+                <Label htmlFor="tier3-mult">מכפיל</Label>
+                <Input
+                  id="tier3-mult"
+                  type="number"
+                  min="1"
+                  step="0.1"
+                  value={tier3Multiplier}
+                  onChange={(e) => setTier3Multiplier(e.target.value)}
+                  placeholder="1.8"
+                />
+                <p className="text-xs text-gray-500 mt-1">x{tier3Multiplier}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview Calculator */}
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <p className="text-sm font-semibold text-gray-700 mb-2">תצוגה מקדימה</p>
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <div className="bg-white p-2 rounded border">
+                <p className="text-gray-500">$30</p>
+                <p className="font-bold">₪{Math.round(30 * tier1Multiplier * usdToIls)}</p>
+              </div>
+              <div className="bg-white p-2 rounded border">
+                <p className="text-gray-500">$75</p>
+                <p className="font-bold">₪{Math.round(75 * tier2Multiplier * usdToIls)}</p>
+              </div>
+              <div className="bg-white p-2 rounded border">
+                <p className="text-gray-500">$150</p>
+                <p className="font-bold">₪{Math.round(150 * tier3Multiplier * usdToIls)}</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -515,6 +686,18 @@ export default function SettingsPage() {
               </div>
               <div>
                 <span className="font-semibold">מינימום פריטים:</span> {settings.order?.minimumItemsCount}
+              </div>
+              <div>
+                <span className="font-semibold">שער המרה:</span> {settings.pricing?.usdToIls} USD→ILS
+              </div>
+              <div>
+                <span className="font-semibold">מכפיל רמה 1:</span> x{settings.pricing?.multipliers?.tier1?.multiplier} (עד ${settings.pricing?.multipliers?.tier1?.maxPrice})
+              </div>
+              <div>
+                <span className="font-semibold">מכפיל רמה 2:</span> x{settings.pricing?.multipliers?.tier2?.multiplier} (עד ${settings.pricing?.multipliers?.tier2?.maxPrice})
+              </div>
+              <div>
+                <span className="font-semibold">מכפיל רמה 3:</span> x{settings.pricing?.multipliers?.tier3?.multiplier} (${settings.pricing?.multipliers?.tier2?.maxPrice}+)
               </div>
               <div className="text-gray-500">
                 <span className="font-semibold">עודכן לאחרונה:</span>{' '}

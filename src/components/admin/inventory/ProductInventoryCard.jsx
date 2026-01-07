@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, ExternalLink, Check, X, Save, Loader2, CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
+import {
+  ChevronDown, ChevronUp, Check, X, Save, Loader2,
+  CheckCircle2, Circle, DollarSign, Calculator,
+  SplitSquareHorizontal, Maximize2, ExternalLink, AlertTriangle,
+  Copy, ClipboardCheck
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { productAvailabilityApi } from '@/lib/api/productAvailability';
 
-export default function ProductInventoryCard({ product }) {
+export default function ProductInventoryCard({ product, pricingConfig, onChecked, isSelected, onSelect }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [justCopied, setJustCopied] = useState(false);
 
   // Product level availability
   const [productAvailable, setProductAvailable] = useState(product.stock?.available ?? true);
@@ -17,21 +23,40 @@ export default function ProductInventoryCard({ product }) {
   // Variants availability - indexed by SKU
   const [variantsAvailability, setVariantsAvailability] = useState({});
 
-  // Checklist state - track if this product was checked in current session
+  // Checklist state
   const [isChecked, setIsChecked] = useState(false);
   const [lastCheckedTime, setLastCheckedTime] = useState(null);
-  const [checkedByName, setCheckedByName] = useState(null);
+
+  // Price update state
+  const [newUsdCost, setNewUsdCost] = useState('');
+  const [calculatedPrice, setCalculatedPrice] = useState(null);
+  const [manualSellPrice, setManualSellPrice] = useState(''); // Manual override for sell price
+
+  // Supplier window reference
+  const supplierWindowRef = useRef(null);
 
   const queryClient = useQueryClient();
 
-  // Initialize checklist state from product data (already loaded from server)
+  // Get current USD cost from product - check multiple sources
+  const currentUsdCost = product.originalPrice?.usd ||
+    product.costBreakdown?.baseCost?.usd ||
+    product.price?.usd || 0;
+
+  // Get ILS cost if no USD available
+  const currentIlsCost = product.originalPrice?.ils ||
+    product.costBreakdown?.baseCost?.ils || 0;
+
+  const currentSellPriceIls = product.price?.ils || 0;
+
+  // Check if USD price is missing but ILS exists
+  const needsUsdUpdate = currentUsdCost === 0 && currentIlsCost > 0;
+
+  // Initialize checklist state from product data
   useEffect(() => {
     const lastChecked = product.inventoryChecks?.lastChecked;
-
     if (lastChecked) {
       setIsChecked(true);
       setLastCheckedTime(lastChecked.timestamp);
-      setCheckedByName(lastChecked.checkedByName);
     }
   }, [product._id, product.inventoryChecks]);
 
@@ -46,40 +71,64 @@ export default function ProductInventoryCard({ product }) {
     }
   }, [product._id]);
 
-  // Update mutation using new centralized API
-  const updateMutation = useMutation({
-    mutationFn: async (data) => {
-      console.log('🟢 [ProductInventoryCard] ===== התחלה =====');
-      console.log('🟢 [ProductInventoryCard] Product ID:', product._id);
-      console.log('🟢 [ProductInventoryCard] Has variants:', hasVariants);
-      console.log('🟢 [ProductInventoryCard] Data received:', data);
+  // Calculate sell price when newUsdCost changes
+  useEffect(() => {
+    if (newUsdCost && !isNaN(parseFloat(newUsdCost)) && pricingConfig) {
+      const usdCost = parseFloat(newUsdCost);
+      const { usdToIls, multipliers } = pricingConfig;
 
-      // If product has no variants, use simple update
-      if (!hasVariants) {
-        console.log('🟢 [ProductInventoryCard] No variants - using checkAndUpdate');
-        const payload = {
-          available: data.productAvailable,
-          notes: 'בדיקה ידנית מעמוד Inventory Check'
-        };
-        console.log('🟢 [ProductInventoryCard] Payload:', payload);
-
-        const response = await productAvailabilityApi.checkAndUpdate(product._id, payload);
-        console.log('🟢 [ProductInventoryCard] Response:', response);
-        return response;
+      let multiplier;
+      if (usdCost <= multipliers.tier1.maxPrice) {
+        multiplier = multipliers.tier1.multiplier;
+      } else if (usdCost <= multipliers.tier2.maxPrice) {
+        multiplier = multipliers.tier2.multiplier;
+      } else {
+        multiplier = multipliers.tier3.multiplier;
       }
 
-      // ✅ For products with variants - use BATCH UPDATE! (much faster!)
-      console.log('🟢 [ProductInventoryCard] Has variants - using BATCH UPDATE');
+      const sellPriceUsd = Math.round(usdCost * multiplier * 100) / 100;
+      // Use manual price if set, otherwise use calculated
+      const sellPriceIls = manualSellPrice && !isNaN(parseFloat(manualSellPrice))
+        ? parseFloat(manualSellPrice)
+        : Math.round(sellPriceUsd * usdToIls);
 
-      // Prepare batch payload
+      const priceDiffPercent = currentSellPriceIls > 0
+        ? ((sellPriceIls - currentSellPriceIls) / currentSellPriceIls * 100).toFixed(1)
+        : 0;
+
+      setCalculatedPrice({
+        usdCost,
+        multiplier,
+        sellPriceUsd,
+        sellPriceIls,
+        recommendedPriceIls: Math.round(sellPriceUsd * usdToIls), // Keep the recommended price
+        isManualOverride: manualSellPrice && !isNaN(parseFloat(manualSellPrice)),
+        priceDiffPercent,
+        isIncrease: sellPriceIls > currentSellPriceIls
+      });
+    } else {
+      setCalculatedPrice(null);
+    }
+  }, [newUsdCost, pricingConfig, currentSellPriceIls, manualSellPrice]);
+
+  // Update availability mutation
+  const updateMutation = useMutation({
+    mutationFn: async (data) => {
+      const hasVariants = product.variants && product.variants.length > 0;
+
+      if (!hasVariants) {
+        return await productAvailabilityApi.checkAndUpdate(product._id, {
+          available: data.productAvailable,
+          notes: 'בדיקה ידנית מעמוד Inventory Check'
+        });
+      }
+
+      // Batch update for variants
       const changedVariants = [];
       for (const variant of data.variants) {
         const originalVariant = product.variants.find(v => v.sku === variant.sku);
         if (originalVariant && originalVariant.stock?.available !== variant.available) {
-          changedVariants.push({
-            sku: variant.sku,
-            available: variant.available
-          });
+          changedVariants.push({ sku: variant.sku, available: variant.available });
         }
       }
 
@@ -88,263 +137,253 @@ export default function ProductInventoryCard({ product }) {
         source: 'inventory_check'
       };
 
-      // Add product update if changed
       if (data.productAvailable !== product.stock?.available) {
-        batchPayload.product = {
-          available: data.productAvailable
-        };
+        batchPayload.product = { available: data.productAvailable };
       }
 
-      // Add variants if any changed
       if (changedVariants.length > 0) {
         batchPayload.variants = changedVariants;
       }
 
-      console.log('🟢 [ProductInventoryCard] Batch payload:', {
-        productChanged: !!batchPayload.product,
-        variantsChanged: changedVariants.length
-      });
-
-      // Single API call for everything!
-      const response = await productAvailabilityApi.batchUpdate(product._id, batchPayload);
-      console.log('🟢 [ProductInventoryCard] Batch update completed!');
-      console.log('  - Stats:', response.data?.stats);
-
-      return response;
+      return await productAvailabilityApi.batchUpdate(product._id, batchPayload);
     },
-    onSuccess: (response) => {
-      // Response structure: { success: true, data: { ... } }
-      const data = response.data || response;
-
-      // Check if this is a batch response
-      if (data.stats) {
-        const { totalVariants, successfulVariants, failedVariants } = data.stats;
-        if (totalVariants > 0) {
-          toast.success(
-            <div className="space-y-1">
-              <p className="font-semibold">✓ הזמינות עודכנה בהצלחה</p>
-              <p className="text-sm">
-                🚀 {successfulVariants} ווריאנטים עודכנו בקריאה אחת!
-                {failedVariants > 0 && ` (${failedVariants} נכשלו)`}
-              </p>
-            </div>,
-            { duration: 5000 }
-          );
-        } else {
-          toast.success('✓ המוצר עודכן בהצלחה');
-        }
-      }
-      // Check for cascade effects (from product update)
-      else if (data.product?.cascadeResult?.cascaded) {
-        const affectedCount = data.product.cascadeResult.affectedVariants?.length || 0;
-        toast.success(
-          <div className="space-y-1">
-            <p className="font-semibold">✓ הזמינות עודכנה בהצלחה</p>
-            <p className="text-sm">🌊 {affectedCount} ווריאנטים עודכנו אוטומטית</p>
-          </div>,
-          { duration: 6000 }
-        );
-      } else {
-        toast.success('✓ הזמינות עודכנה בהצלחה');
-      }
-
-      // Check for price changes
-      if (data.priceChangeDetected?.isSignificant) {
-        const { priceDiff, previousPrice, newPrice } = data.priceChangeDetected;
-        toast.warning(
-          <div className="space-y-1">
-            <p className="font-semibold flex items-center gap-1">
-              <AlertTriangle className="w-4 h-4" />
-              שינוי מחיר משמעותי זוהה!
-            </p>
-            <p className="text-sm">
-              המחיר עלה ב-{priceDiff.toFixed(1)}% (מ-₪{previousPrice.toFixed(0)} ל-₪{newPrice.toFixed(0)})
-            </p>
-          </div>,
-          { duration: 8000 }
-        );
-      }
-
-      // Show affected orders/carts
-      if (data.affectedOrders?.length > 0 || data.affectedCarts?.length > 0) {
-        const ordersCount = data.affectedOrders?.length || 0;
-        const cartsCount = data.affectedCarts?.length || 0;
-        toast.info(
-          <div className="space-y-1">
-            <p className="font-semibold">📦 עדכון נוסף</p>
-            <p className="text-sm">
-              {ordersCount > 0 && `${ordersCount} הזמנות `}
-              {ordersCount > 0 && cartsCount > 0 && 'ו-'}
-              {cartsCount > 0 && `${cartsCount} עגלות `}
-              עודכנו
-            </p>
-          </div>,
-          { duration: 5000 }
-        );
-      }
-
+    onSuccess: () => {
+      toast.success('✓ הזמינות עודכנה בהצלחה');
       setHasChanges(false);
       queryClient.invalidateQueries(['admin', 'products', 'inventory']);
     },
     onError: (error) => {
-      toast.error('שגיאה בעדכון הזמינות', {
-        description: error.response?.data?.message || error.message
-      });
+      toast.error('שגיאה בעדכון', { description: error.message });
     }
   });
 
-  // Handle save
+  // Update price mutation
+  const updatePriceMutation = useMutation({
+    mutationFn: async ({ newUsdCost, confirmOnly, overrideSellPrice }) => {
+      return await productAvailabilityApi.updatePrice(product._id, {
+        newUsdCost: confirmOnly ? undefined : newUsdCost,
+        confirmOnly,
+        overrideSellPrice, // Manual override for sell price
+        notes: confirmOnly ? 'אישור מחיר - ללא שינוי' : `עדכון מחיר ל-$${newUsdCost}${overrideSellPrice ? ` (מחיר מכירה ידני: ₪${overrideSellPrice})` : ''}`
+      });
+    },
+    onSuccess: (response) => {
+      const data = response.data;
+      if (data.priceChanged) {
+        toast.success(
+          <div className="space-y-1">
+            <p className="font-semibold">✓ מחיר עודכן בהצלחה</p>
+            <p className="text-sm">
+              ${data.previousCostUsd} → ${data.newCostUsd} ({data.priceDiffPercent}%)
+            </p>
+            <p className="text-sm">מחיר מכירה: ₪{data.newSellPriceIls}</p>
+          </div>
+        );
+      } else {
+        toast.success('✓ מחיר אושר - תאריך בדיקה עודכן');
+      }
+
+      setNewUsdCost('');
+      setManualSellPrice('');
+      setCalculatedPrice(null);
+      setIsChecked(true);
+      setLastCheckedTime(new Date().toISOString());
+
+      if (onChecked) onChecked();
+
+      queryClient.invalidateQueries(['admin', 'products', 'inventory']);
+    },
+    onError: (error) => {
+      toast.error('שגיאה בעדכון מחיר', { description: error.message });
+    }
+  });
+
+  // Handle save availability
   const handleSave = () => {
     const variantsData = Object.keys(variantsAvailability).map(sku => ({
       sku,
       available: variantsAvailability[sku]
     }));
+    updateMutation.mutate({ productAvailable, variants: variantsData });
+  };
 
-    updateMutation.mutate({
-      productAvailable,
-      variants: variantsData
+  // Handle confirm price (no change)
+  const handleConfirmPrice = () => {
+    updatePriceMutation.mutate({ confirmOnly: true });
+  };
+
+  // Handle update price
+  const handleUpdatePrice = () => {
+    if (!newUsdCost || isNaN(parseFloat(newUsdCost))) {
+      toast.error('יש להזין מחיר תקין');
+      return;
+    }
+    const overrideSellPrice = manualSellPrice && !isNaN(parseFloat(manualSellPrice))
+      ? parseFloat(manualSellPrice)
+      : undefined;
+    updatePriceMutation.mutate({
+      newUsdCost: parseFloat(newUsdCost),
+      confirmOnly: false,
+      overrideSellPrice
     });
   };
 
-  // Toggle product availability
+  // Toggle functions
   const toggleProductAvailability = () => {
     setProductAvailable(prev => !prev);
     setHasChanges(true);
   };
 
-  // Toggle single variant availability
   const toggleVariantAvailability = (sku) => {
-    setVariantsAvailability(prev => ({
-      ...prev,
-      [sku]: !prev[sku]
-    }));
+    setVariantsAvailability(prev => ({ ...prev, [sku]: !prev[sku] }));
     setHasChanges(true);
   };
 
-  // Toggle all variants of a specific color
   const toggleColorAvailability = (colorVariants) => {
     const newAvailability = !colorVariants.every(v => variantsAvailability[v.sku]);
-
     setVariantsAvailability(prev => {
       const updated = { ...prev };
-      colorVariants.forEach(variant => {
-        updated[variant.sku] = newAvailability;
-      });
+      colorVariants.forEach(variant => { updated[variant.sku] = newAvailability; });
       return updated;
     });
     setHasChanges(true);
   };
 
-  // Mark product as checked - save to server
+  // Mark as checked
   const markAsChecked = async () => {
-    console.log('🔵 [markAsChecked] Starting...');
-
-    const timestamp = new Date().toISOString();
     const hasVariants = product.variants && product.variants.length > 0;
-
-    // Determine result based on current availability
     let result = 'available';
+
     if (hasVariants) {
       const allVariants = Object.values(variantsAvailability);
       const anyAvailable = allVariants.some(v => v);
       const allAvailable = allVariants.every(v => v);
-
-      if (!anyAvailable) {
-        result = 'unavailable';
-      } else if (!allAvailable) {
-        result = 'partial';
-      }
+      if (!anyAvailable) result = 'unavailable';
+      else if (!allAvailable) result = 'partial';
     } else {
       result = productAvailable ? 'available' : 'unavailable';
     }
 
-    // Create variants snapshot
-    const variantsSnapshot = hasVariants
-      ? product.variants.map(v => ({
-          sku: v.sku,
-          available: variantsAvailability[v.sku] ?? true
-        }))
-      : [];
-
     try {
-      const response = await productAvailabilityApi.recordInventoryCheck(product._id, {
+      await productAvailabilityApi.recordInventoryCheck(product._id, {
         result,
-        notes: 'בדיקה ידנית מעמוד Inventory Check',
-        variantsSnapshot
+        notes: 'בדיקה ידנית'
       });
-
-      console.log('✅ [markAsChecked] Saved to server:', response);
 
       setIsChecked(true);
-      setLastCheckedTime(timestamp);
-      setCheckedByName(response.data?.lastChecked?.checkedByName || 'אתה');
-
-      toast.success('✓ מוצר סומן כנבדק', {
-        description: 'הבדיקה נשמרה בשרת בהצלחה'
-      });
+      setLastCheckedTime(new Date().toISOString());
+      if (onChecked) onChecked();
+      toast.success('✓ מוצר סומן כנבדק');
     } catch (error) {
-      console.error('❌ [markAsChecked] Error:', error);
-      toast.error('שגיאה בשמירת בדיקת זמינות', {
-        description: error.response?.data?.message || error.message
-      });
+      toast.error('שגיאה בשמירת בדיקה', { description: error.message });
     }
   };
 
-  // Unmark product (for corrections) - currently just clears local state
-  // We keep history on server, but allow user to re-check
-  const unmarkAsChecked = () => {
-    setIsChecked(false);
-    setLastCheckedTime(null);
-    setCheckedByName(null);
-
-    toast.info('ביטול סימון בדיקה', {
-      description: 'ניתן לסמן שוב את המוצר כנבדק'
-    });
+  // Get best available supplier link
+  const getSupplierLink = () => {
+    return product.links?.supplierUrl ||
+           product.supplier?.url ||
+           product.links?.amazon ||
+           product.links?.affiliateUrl ||
+           null;
   };
 
-  // Open supplier link in popup and auto-mark as checking
-  const openSupplierLink = () => {
-    const link = product.links?.supplierUrl || product.supplier?.url;
+  // Open supplier in Split View
+  const openInSplitView = () => {
+    const link = getSupplierLink();
 
     if (!link) {
       toast.warning('אין קישור ספק למוצר זה');
       return;
     }
 
-    const width = 1200;
-    const height = 800;
-    const left = (window.screen.width - width) / 2;
-    const top = (window.screen.height - height) / 2;
+    const screenWidth = window.screen.availWidth;
+    const screenHeight = window.screen.availHeight;
+    const halfWidth = Math.floor(screenWidth / 2);
 
-    const popup = window.open(
+    // Move current window to left half
+    try {
+      window.moveTo(0, 0);
+      window.resizeTo(halfWidth, screenHeight);
+    } catch (e) {
+      console.log('Could not resize current window:', e);
+    }
+
+    // Open supplier in right half
+    const supplierWindow = window.open(
       link,
-      `supplier-${product._id}`,
-      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      'supplier-window',
+      `width=${halfWidth},height=${screenHeight},left=${halfWidth},top=0,resizable=yes,scrollbars=yes`
     );
 
-    if (popup) {
-      toast.info('🔍 חלון בדיקת ספק נפתח', {
-        description: 'סמן זמינות ושמור כשתסיים',
+    if (supplierWindow) {
+      supplierWindowRef.current = supplierWindow;
+
+      toast.info('🔍 תצוגה מפוצלת הופעלה', {
+        description: 'האתר שלנו בצד שמאל, הספק בצד ימין',
         duration: 4000
       });
 
-      // Track window closure
-      const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
+      // Auto expand
+      setIsExpanded(true);
 
-          // Auto-expand product if not already expanded
-          if (!isExpanded) {
-            setIsExpanded(true);
+      // Check when supplier window closes
+      const checkClosed = setInterval(() => {
+        if (supplierWindow.closed) {
+          clearInterval(checkClosed);
+          supplierWindowRef.current = null;
+
+          // Restore window size
+          try {
+            window.moveTo(0, 0);
+            window.resizeTo(screenWidth, screenHeight);
+          } catch (e) {
+            console.log('Could not restore window:', e);
           }
 
-          toast.info('✓ חלון נסגר - עדכן זמינות למטה', {
-            duration: 3000
-          });
+          toast.info('✓ חלון ספק נסגר', { duration: 2000 });
         }
       }, 1000);
     } else {
       toast.error('לא הצלחנו לפתוח חלון - בדוק חוסם פופאפים');
+    }
+  };
+
+  // Open in regular popup
+  const openSupplierPopup = () => {
+    const link = getSupplierLink();
+    if (!link) {
+      toast.warning('אין קישור ספק');
+      return;
+    }
+
+    window.open(link, `supplier-${product._id}`, 'width=1200,height=800,resizable=yes,scrollbars=yes');
+    setIsExpanded(true);
+  };
+
+  // Supplier link for display
+  const supplierLink = getSupplierLink();
+
+  // Copy product name/slug to clipboard
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setJustCopied(true);
+      toast.success(`${type} הועתק!`, { duration: 1500 });
+      setTimeout(() => setJustCopied(false), 1500);
+    } catch (err) {
+      toast.error('שגיאה בהעתקה');
+    }
+  };
+
+  // Handle card click for selection
+  const handleCardClick = (e) => {
+    // Don't trigger selection if clicking on interactive elements
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
+      return;
+    }
+    if (onSelect) {
+      onSelect(product._id);
     }
   };
 
@@ -355,182 +394,205 @@ export default function ProductInventoryCard({ product }) {
   if (hasVariants) {
     product.variants.forEach(variant => {
       const color = variant.color || 'ללא צבע';
-      if (!variantsByColor[color]) {
-        variantsByColor[color] = [];
-      }
+      if (!variantsByColor[color]) variantsByColor[color] = [];
       variantsByColor[color].push(variant);
     });
   }
 
   const colorGroups = Object.entries(variantsByColor);
-
-  // Calculate availability stats
   const totalVariants = product.variants?.length || 0;
   const availableVariants = hasVariants
-    ? product.variants.filter(v => variantsAvailability[v.sku]).length
-    : 0;
+    ? product.variants.filter(v => variantsAvailability[v.sku]).length : 0;
 
-  // Format last checked time
+  // Format time
   const formatCheckTime = (timestamp) => {
     if (!timestamp) return '';
-    const date = new Date(timestamp);
-    return date.toLocaleString('he-IL', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(timestamp).toLocaleString('he-IL', {
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     });
   };
 
   return (
-    <div className={`border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all ${
-      isChecked
-        ? 'border-green-400 bg-green-50'
-        : !productAvailable
-          ? 'border-red-300 bg-red-50'
-          : 'bg-white border-neutral-200'
-    }`}>
-      {/* Header */}
-      <div className="p-4 bg-white">
-        <div className="flex items-start gap-4">
-          {/* Checklist Checkbox */}
-          <button
-            onClick={isChecked ? unmarkAsChecked : markAsChecked}
-            className={`flex-shrink-0 mt-1 w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
-              isChecked
-                ? 'bg-green-500 border-green-600 text-white'
-                : 'border-neutral-300 hover:border-green-400 text-transparent hover:text-green-400'
-            }`}
-            title={isChecked ? 'בוטל סימון (לחץ לביטול)' : 'סמן כנבדק'}
-          >
-            {isChecked ? (
-              <CheckCircle2 className="w-5 h-5" />
-            ) : (
-              <Circle className="w-5 h-5" />
+    <div
+      onClick={handleCardClick}
+      className={`border-2 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer ${
+        isSelected
+          ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-300 ring-offset-1'
+          : isChecked ? 'border-green-400 bg-green-50'
+          : !productAvailable ? 'border-red-300 bg-red-50'
+          : 'bg-white border-neutral-200 hover:border-neutral-300'
+      }`}
+    >
+      {/* Header - Responsive */}
+      <div className={`p-3 sm:p-4 ${isSelected ? 'bg-purple-50' : 'bg-white'}`}>
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+          {/* Row 1: Checkbox + Image + Info */}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            {/* Checklist Checkbox */}
+            <button
+              onClick={isChecked ? () => setIsChecked(false) : markAsChecked}
+              className={`flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
+                isChecked
+                  ? 'bg-green-500 border-green-600 text-white'
+                  : 'border-neutral-300 hover:border-green-400'
+              }`}
+            >
+              {isChecked ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <Circle className="w-4 h-4 sm:w-5 sm:h-5" />}
+            </button>
+
+            {/* Product Image - Small */}
+            {product.images?.length > 0 && (
+              <img
+                src={product.images[0].url || product.images[0]}
+                alt={product.name_he || 'Product'}
+                className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg border flex-shrink-0"
+              />
             )}
-          </button>
 
-          {/* Product Image */}
-          {product.images && product.images.length > 0 && (
-            <img
-              src={product.images[0].url || product.images[0]}
-              alt={product.name_he || product.name_en || 'Product'}
-              className="w-20 h-20 object-cover rounded-lg border border-neutral-200 flex-shrink-0"
-            />
-          )}
+            {/* Product Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-semibold text-sm sm:text-base text-neutral-900 truncate flex-1">
+                  {product.name_he || product.name_en}
+                </h3>
+                {/* Copy Buttons */}
+                <button
+                  onClick={() => copyToClipboard(product.name_he || product.name_en, 'שם')}
+                  className={`p-1 rounded hover:bg-neutral-200 transition-colors ${justCopied ? 'text-green-600' : 'text-neutral-400'}`}
+                  title="העתק שם מוצר"
+                >
+                  {justCopied ? <ClipboardCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+                {product.slug && (
+                  <button
+                    onClick={() => copyToClipboard(product.slug, 'Slug')}
+                    className="p-1 rounded hover:bg-neutral-200 transition-colors text-neutral-400 hover:text-neutral-600"
+                    title="העתק Slug"
+                  >
+                    <span className="text-[10px] font-mono">slug</span>
+                  </button>
+                )}
+              </div>
 
-          {/* Product Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start gap-2 mb-2">
-              <h3 className="font-semibold text-neutral-900 text-lg truncate flex-1">
-                {product.name_he || product.name_en}
-              </h3>
-              {isChecked && (
-                <span className="flex-shrink-0 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                  ✓ נבדק
+              {/* Price Display - Prominent */}
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                {needsUsdUpdate ? (
+                  <>
+                    {/* Warning - No USD price */}
+                    <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 rounded-lg border border-amber-300">
+                      <AlertTriangle className="w-3 h-3 text-amber-600" />
+                      <span className="text-xs font-semibold text-amber-800">
+                        עלות: ₪{currentIlsCost.toFixed(0)} (חסר $)
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg">
+                    <DollarSign className="w-3 h-3 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-800">
+                      עלות: ${currentUsdCost.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-lg">
+                  <span className="text-xs font-semibold text-green-800">
+                    מכירה: ₪{currentSellPriceIls}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status badges */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                  productAvailable
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {productAvailable ? '✓ זמין' : '✗ לא זמין'}
                 </span>
+
+                {hasVariants && (
+                  <span className="px-2 py-0.5 text-xs text-neutral-600 bg-neutral-100 rounded">
+                    {availableVariants}/{totalVariants} מידות
+                  </span>
+                )}
+
+                {isChecked && (
+                  <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">
+                    ✓ נבדק
+                  </span>
+                )}
+              </div>
+
+              {isChecked && lastCheckedTime && (
+                <p className="text-xs text-green-600 mt-1">
+                  {formatCheckTime(lastCheckedTime)}
+                </p>
               )}
             </div>
-
-            {/* Single Availability Status */}
-            <div className="mb-2">
-              <span className={`inline-block px-3 py-1.5 text-sm font-semibold rounded-lg border-2 ${
-                productAvailable
-                  ? 'bg-green-100 text-green-800 border-green-400'
-                  : 'bg-red-100 text-red-800 border-red-400'
-              }`}>
-                {productAvailable ? '✓ זמין' : '✗ לא זמין'}
-              </span>
-            </div>
-
-            {product.category && (
-              <p className="text-xs text-neutral-500 mb-2">
-                קטגוריה: {product.category.name?.he || product.category.name}
-              </p>
-            )}
-
-            {isChecked && lastCheckedTime && (
-              <p className="text-xs text-green-600 mb-1">
-                נבדק ב: {formatCheckTime(lastCheckedTime)}
-                {checkedByName && <span className="text-neutral-500"> על ידי {checkedByName}</span>}
-              </p>
-            )}
-
-            {hasVariants ? (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-neutral-600">
-                  🎨 {colorGroups.length} צבעים
-                </span>
-                <span className="text-neutral-400">|</span>
-                <span className="text-neutral-600">
-                  📏 {availableVariants}/{totalVariants} מידות זמינות
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-neutral-500 italic">
-                  📦 מוצר פשוט (אין ווריאנטים)
-                </span>
-              </div>
-            )}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Supplier Link Button */}
-            {(product.links?.supplierUrl || product.supplier?.url) && (
-              <Button
-                onClick={openSupplierLink}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-1.5"
+          {/* Row 2: Actions */}
+          <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
+            {/* Simple External Link Button */}
+            {supplierLink && (
+              <a
+                href={supplierLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg border border-neutral-300 hover:border-blue-400 hover:bg-blue-50 transition-all"
+                title="פתח קישור ספק בכרטיסיה חדשה"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                בדוק ספק
-              </Button>
+                <ExternalLink className="w-4 h-4 text-neutral-600 hover:text-blue-600" />
+              </a>
             )}
 
-            {/* Product Availability Toggle */}
+            {/* Split View Button */}
+            {supplierLink && (
+              <>
+                <Button
+                  onClick={openInSplitView}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1 text-xs"
+                >
+                  <SplitSquareHorizontal className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">תצוגה מפוצלת</span>
+                  <span className="sm:hidden">Split</span>
+                </Button>
+                <Button
+                  onClick={openSupplierPopup}
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 text-xs"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            )}
+
+            {/* Availability Toggle */}
             <button
               onClick={toggleProductAvailability}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                 productAvailable
                   ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
                   : 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-300'
               }`}
             >
-              {productAvailable ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  זמין
-                </>
-              ) : (
-                <>
-                  <X className="w-4 h-4" />
-                  לא זמין
-                </>
-              )}
+              {productAvailable ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+              {productAvailable ? 'זמין' : 'לא זמין'}
             </button>
 
-            {/* Expand/Collapse Button */}
+            {/* Expand Button */}
             {hasVariants && (
               <Button
                 onClick={() => setIsExpanded(!isExpanded)}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-1.5"
+                className="text-xs"
               >
-                {isExpanded ? (
-                  <>
-                    <ChevronUp className="w-4 h-4" />
-                    סגור
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4" />
-                    הרחב
-                  </>
-                )}
+                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </Button>
             )}
 
@@ -539,113 +601,161 @@ export default function ProductInventoryCard({ product }) {
               onClick={handleSave}
               disabled={!hasChanges || updateMutation.isPending}
               size="sm"
-              className={`flex items-center gap-1.5 ${
-                hasChanges
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                  : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-              }`}
+              className={`text-xs ${hasChanges ? 'bg-purple-600 hover:bg-purple-700' : 'bg-neutral-300'}`}
             >
-              {updateMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  שומר...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  שמור
-                </>
-              )}
+              {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Variants Section (Expanded) - צבעים ומידות */}
-      {isExpanded && hasVariants && (
-        <div className="p-4 bg-neutral-50 border-t border-neutral-200">
-          <div className="flex items-center gap-2 mb-4">
-            <p className="text-sm font-semibold text-neutral-800">🎨 צבעים → 📏 מידות</p>
-            <p className="text-xs text-neutral-500">לחץ על כפתור צבע להחלפת כל המידות שלו</p>
-          </div>
+      {/* Price Update Section - Always visible */}
+      <div className={`px-3 sm:px-4 py-3 border-t ${needsUsdUpdate ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              {needsUsdUpdate ? (
+                <>
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-800">נדרש עדכון מחיר $:</span>
+                </>
+              ) : (
+                <>
+                  <Calculator className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">עדכון מחיר:</span>
+                </>
+              )}
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              {/* Current Price */}
+              <div className={`px-2 py-1 rounded border text-xs ${needsUsdUpdate ? 'bg-amber-100 border-amber-300' : 'bg-white'}`}>
+                {needsUsdUpdate ? (
+                  <>נוכחי: <span className="font-semibold">₪{currentIlsCost.toFixed(0)}</span> <span className="text-amber-600">(הזן $)</span></>
+                ) : (
+                  <>נוכחי: <span className="font-semibold">${currentUsdCost.toFixed(2)}</span></>
+                )}
+              </div>
+
+              {/* New USD Cost Input */}
+              <div className="relative min-w-[100px] max-w-[120px]">
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 text-sm">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="עלות $"
+                  value={newUsdCost}
+                  onChange={(e) => setNewUsdCost(e.target.value)}
+                  className="w-full pr-6 pl-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Recommended Price (from calculation) */}
+              {calculatedPrice && (
+                <div className="px-2 py-1 bg-purple-100 rounded text-xs text-purple-700">
+                  מומלץ: ₪{calculatedPrice.recommendedPriceIls}
+                </div>
+              )}
+
+              {/* Manual Sell Price Override Input */}
+              <div className="relative min-w-[100px] max-w-[120px]">
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 text-sm">₪</span>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="מכירה (ידני)"
+                  value={manualSellPrice}
+                  onChange={(e) => setManualSellPrice(e.target.value)}
+                  className={`w-full pr-6 pl-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-green-500 ${
+                    manualSellPrice ? 'border-green-400 bg-green-50' : ''
+                  }`}
+                />
+              </div>
+
+              {/* Final Price Preview */}
+              {calculatedPrice && (
+                <div className={`px-2 py-1 rounded text-xs font-medium ${
+                  calculatedPrice.isIncrease ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  → ₪{calculatedPrice.sellPriceIls}
+                  {calculatedPrice.isManualOverride && <span className="mr-1">(ידני)</span>}
+                  <span className="mr-1">
+                    ({calculatedPrice.isIncrease ? '+' : ''}{calculatedPrice.priceDiffPercent}%)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleConfirmPrice}
+                disabled={updatePriceMutation.isPending}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                {updatePriceMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'אשר ללא שינוי'}
+              </Button>
+
+              {calculatedPrice && (
+                <Button
+                  onClick={handleUpdatePrice}
+                  disabled={updatePriceMutation.isPending}
+                  size="sm"
+                  className="text-xs bg-blue-600 hover:bg-blue-700"
+                >
+                  {updatePriceMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'עדכן מחיר'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+      {/* Variants Section - Chips Layout */}
+      {isExpanded && hasVariants && (
+        <div className="p-3 sm:p-4 bg-neutral-50 border-t border-neutral-200">
+          <p className="text-xs font-medium text-neutral-600 mb-2">צבעים ומידות:</p>
+
+          <div className="space-y-3">
             {colorGroups.map(([color, variants]) => {
               const allAvailable = variants.every(v => variantsAvailability[v.sku]);
-              const someAvailable = variants.some(v => variantsAvailability[v.sku]);
               const availableCount = variants.filter(v => variantsAvailability[v.sku]).length;
 
               return (
-                <div
-                  key={color}
-                  className={`bg-white rounded-lg p-3 border-2 transition-all ${
-                    allAvailable
-                      ? 'border-green-300 shadow-sm'
-                      : someAvailable
-                        ? 'border-yellow-300 shadow-sm'
-                        : 'border-red-300'
-                  }`}
-                >
-                  {/* Color Header */}
-                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-200">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🎨</span>
-                      <div className="font-semibold text-neutral-900">{color}</div>
-                      {allAvailable ? (
-                        <Check className="w-4 h-4 text-green-600" />
-                      ) : someAvailable ? (
-                        <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                      ) : (
-                        <X className="w-4 h-4 text-red-600" />
-                      )}
-                    </div>
+                <div key={color} className="flex flex-wrap items-center gap-2">
+                  {/* Color Chip */}
+                  <button
+                    onClick={() => toggleColorAvailability(variants)}
+                    disabled={!productAvailable}
+                    className={`px-2 py-1 rounded text-xs font-medium border transition-all ${
+                      allAvailable
+                        ? 'bg-green-100 text-green-700 border-green-300'
+                        : 'bg-red-100 text-red-700 border-red-300'
+                    } disabled:opacity-50`}
+                  >
+                    🎨 {color} ({availableCount}/{variants.length})
+                  </button>
 
-                    <button
-                      onClick={() => toggleColorAvailability(variants)}
-                      disabled={!productAvailable}
-                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors border ${
-                        allAvailable
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-300'
-                          : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-300'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      title={!productAvailable ? 'המוצר הראשי לא זמין' : 'החלף זמינות כל המידות'}
-                    >
-                      {availableCount}/{variants.length}
-                    </button>
-                  </div>
-
-                  {/* Parent unavailable warning */}
-                  {!productAvailable && (
-                    <div className="mb-2 p-2 bg-amber-50 border border-amber-300 rounded text-xs text-amber-700">
-                      ⚠️ המוצר הראשי לא זמין - כל הצבעים והמידות לא זמינים אוטומטית
-                    </div>
-                  )}
-
-                  {/* Sizes Grid */}
-                  <div>
-                    <p className="text-xs text-neutral-500 mb-2">📏 מידות:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {variants.map((variant) => {
-                        const isAvailable = variantsAvailability[variant.sku];
-
-                        return (
-                          <button
-                            key={variant.sku}
-                            onClick={() => toggleVariantAvailability(variant.sku)}
-                            disabled={!productAvailable}
-                            className={`px-3 py-2 rounded-md text-xs font-medium border-2 transition-all ${
-                              isAvailable
-                                ? 'bg-green-50 border-green-400 text-green-800 hover:bg-green-100 hover:border-green-500'
-                                : 'bg-red-50 border-red-400 text-red-800 hover:bg-red-100 hover:border-red-500'
-                            } disabled:opacity-40 disabled:cursor-not-allowed`}
-                            title={`SKU: ${variant.sku}${!productAvailable ? ' (מוצר ראשי לא זמין)' : ''}`}
-                          >
-                            {variant.size || 'רגיל'}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  {/* Size Chips */}
+                  {variants.map((variant) => {
+                    const isAvailable = variantsAvailability[variant.sku];
+                    return (
+                      <button
+                        key={variant.sku}
+                        onClick={() => toggleVariantAvailability(variant.sku)}
+                        disabled={!productAvailable}
+                        className={`px-2 py-1 rounded text-xs font-medium border transition-all ${
+                          isAvailable
+                            ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
+                            : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
+                        } disabled:opacity-40`}
+                      >
+                        {variant.size || 'רגיל'}
+                      </button>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -655,18 +765,9 @@ export default function ProductInventoryCard({ product }) {
 
       {/* Changes indicator */}
       {hasChanges && (
-        <div className="px-4 py-2 bg-yellow-50 border-t border-yellow-200 text-center">
+        <div className="px-3 py-2 bg-yellow-50 border-t border-yellow-200 text-center">
           <p className="text-xs text-yellow-800 font-medium">
-            ⚠ יש שינויים שלא נשמרו - לחץ "שמור" לעדכון
-          </p>
-        </div>
-      )}
-
-      {/* Quick check reminder */}
-      {!isChecked && isExpanded && (
-        <div className="px-4 py-2 bg-blue-50 border-t border-blue-200 text-center">
-          <p className="text-xs text-blue-800 font-medium">
-            💡 אל תשכח לסמן את המוצר כנבדק אחרי שמירת השינויים
+            ⚠ יש שינויים שלא נשמרו
           </p>
         </div>
       )}
